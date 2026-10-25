@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "id": "alice.ring-studio",
+  "version": "1.0.0",
+  "title": {"ru": "Ring Studio", "en": "Ring Studio"},
+  "description": {"ru": "Настройте цвет, яркость и ритм кольца подсветки.", "en": "Make the LED ring yours with color, brightness and motion."},
+  "author": "Alice Homebrew",
+  "api": 1,
+  "permissions": ["led.ring"],
+  "config": [
+    {"key": "color", "label": {"ru": "Цвет подсветки", "en": "Light color"}, "type": "color", "default": "#a5d178"},
+    {"key": "brightness", "label": {"ru": "Яркость, %", "en": "Brightness, %"}, "type": "range", "default": 25, "min": 0, "max": 100, "step": 1},
+    {"key": "animation", "label": {"ru": "Анимация", "en": "Animation"}, "type": "select", "default": "solid", "options": [
+      {"value": "solid", "label": {"ru": "Постоянный свет", "en": "Solid"}},
+      {"value": "breathe", "label": {"ru": "Дыхание", "en": "Breathe"}},
+      {"value": "rainbow", "label": {"ru": "Радуга", "en": "Rainbow"}},
+      {"value": "chase", "label": {"ru": "Бегущий огонёк", "en": "Chase"}}
+    ]},
+    {"key": "speed", "label": {"ru": "Скорость анимации", "en": "Animation speed"}, "type": "range", "default": 30, "min": 1, "max": 100, "step": 1},
+    {"key": "reverse", "label": {"ru": "Обратное направление", "en": "Reverse direction"}, "type": "boolean", "default": false}
+  ],
+  "module_sha256": ""
+}

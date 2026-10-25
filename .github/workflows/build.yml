@@ -1,0 +1,46 @@
+name: Build Alice Homebrew
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: '1.26.5'
+          cache: true
+      - run: go test ./...
+      - run: python3 scripts/build-distribution.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: AliceHomebrew-0.2.0
+          path: release/*
+          if-no-files-found: error
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: AliceHomebrew-0.2.0
+          path: release
+      - name: Publish the first 0.2.0 release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view v0.2.0 >/dev/null 2>&1; then
+            echo 'Release v0.2.0 already exists; keeping its files unchanged.'
+          else
+            gh release create v0.2.0 release/* --target "$GITHUB_SHA" --title 'Alice Homebrew 0.2.0' --notes-file RELEASE_NOTES.md
+          fi

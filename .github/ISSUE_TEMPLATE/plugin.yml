@@ -1,0 +1,37 @@
+name: Plugin submission
+description: Submit an .aliceplugin package for manual review
+title: "[Plugin] "
+labels: []
+body:
+  - type: input
+    id: package
+    attributes:
+      label: Link to the .aliceplugin release asset
+      description: Upload the package to a GitHub Release in your source repository.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Source repository and commit
+    validations:
+      required: true
+  - type: input
+    id: checksum
+    attributes:
+      label: SHA-256 of the exact package
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Requested permissions, tests and device compatibility
+    validations:
+      required: true
+  - type: checkboxes
+    id: review
+    attributes:
+      label: Review process
+      options:
+        - label: I understand that publication requires manual approval of this exact version.
+          required: true
