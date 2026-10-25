@@ -1,4 +1,7 @@
-# Alice Homebrew 0.3.0
+# Alice Homebrew 0.4.0
+
+В 0.4.0 добавлено автоматическое обновление менеджера со стабильных релизов этого репозитория каждые 5 часов. Настройки, плагинные пакеты и ADB root сохраняются. Есть проверка SHA-256, резервная версия и автоматический откат при отказе запуска. В настройках доступны статус, время следующей проверки и ручная проверка. [Подробнее об обновлениях и выпуске новых версий](docs/MANAGER_UPDATES.md).
+
 
 [Скачать](https://github.com/hertebeznat-cell/alice-homebrew/releases/latest) · [Официальные плагины](https://hertebeznat-cell.github.io/alice-homebrew/) · [Создать плагин](docs/PLUGIN_GUIDE.md) · [Оборудование и нативный SDK](docs/NATIVE_SDK.md) · [Свой источник](docs/SOURCE_GUIDE.md)
 

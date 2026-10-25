@@ -19,7 +19,7 @@ jobs:
       - run: python3 scripts/build-distribution.py
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: AliceHomebrew-0.3.0
+          name: AliceHomebrew-build
           path: release/*
           if-no-files-found: error
   publish:
@@ -32,15 +32,18 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
-          name: AliceHomebrew-0.3.0
+          name: AliceHomebrew-build
           path: release
-      - name: Publish the first 0.3.0 release
+      - name: Publish the version built from source
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          if gh release view v0.3.0 >/dev/null 2>&1; then
-            echo 'Release v0.3.0 already exists; keeping its files unchanged.'
+          version=$(cat release/version.txt)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists; keeping its files unchanged."
           else
-            gh release create v0.3.0 release/* --target "$GITHUB_SHA" --title 'Alice Homebrew 0.3.0' --notes-file RELEASE_NOTES.md
+            gh release create "$tag" release/* --target "$GITHUB_SHA" --title "Alice Homebrew $version" --notes-file RELEASE_NOTES.md
           fi

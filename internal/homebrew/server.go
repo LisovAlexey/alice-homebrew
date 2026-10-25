@@ -1,6 +1,7 @@
 package homebrew
 
 import (
+	"context"
 	"crypto/subtle"
 	"embed"
 	"encoding/json"
@@ -127,7 +128,13 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			mode = "store"
 			pub = s.Store.PublicKey()
 		}
-		jsonResponse(w, map[string]any{"mode": mode, "authenticated": s.authed(r), "access_code_required": s.Token != "", "public_key": pub, "version": "0.3.0"})
+		ready := false
+		if s.Manager != nil {
+			s.Manager.mu.Lock()
+			ready = s.Manager.ready
+			s.Manager.mu.Unlock()
+		}
+		jsonResponse(w, map[string]any{"mode": mode, "authenticated": s.authed(r), "access_code_required": s.Token != "", "public_key": pub, "version": Version, "ready": ready})
 		return
 	}
 	if r.URL.Path == "/api/login" && r.Method == "POST" {
@@ -235,6 +242,39 @@ func (s *Server) stationRequest(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("station manager unavailable")
 	}
 	switch {
+	case r.URL.Path == "/api/updates" && r.Method == "GET":
+		if m.Updater == nil {
+			return errors.New("updater unavailable")
+		}
+		jsonResponse(w, m.Updater.Status())
+		return nil
+	case r.URL.Path == "/api/updates/check" && r.Method == "POST":
+		if m.Updater == nil {
+			return errors.New("updater unavailable")
+		}
+		// The background request survives a browser navigating away mid-download.
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+			defer cancel()
+			_, _ = m.Updater.Check(ctx, true)
+		}()
+		jsonResponse(w, map[string]bool{"started": true})
+		return nil
+	case r.URL.Path == "/api/updates/settings" && r.Method == "POST":
+		if m.Updater == nil {
+			return errors.New("updater unavailable")
+		}
+		var q struct {
+			Enabled bool `json:"enabled"`
+		}
+		if e := requestJSON(w, r, &q); e != nil {
+			return e
+		}
+		if e := m.Updater.SetEnabled(q.Enabled); e != nil {
+			return e
+		}
+		jsonResponse(w, m.Updater.Status())
+		return nil
 	case r.URL.Path == "/api/hardware" && r.Method == "GET":
 		jsonResponse(w, HardwareInventory())
 		return nil

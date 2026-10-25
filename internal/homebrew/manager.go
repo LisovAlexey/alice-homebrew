@@ -60,6 +60,8 @@ type Manager struct {
 	AllowLocalStore bool
 	catalogs        map[string]*Catalog
 	diskProbe       func(string) DiskUsage
+	Updater         *Updater
+	ready           bool
 }
 
 func NewManager(dir string, hardware, allowLocal bool) (*Manager, error) {
@@ -443,7 +445,7 @@ func (m *Manager) Snapshot() map[string]any {
 			sources = append(sources, clone(s))
 		}
 	}
-	return map[string]any{"plugins": plugins, "settings": m.state.Settings, "sources": sources, "catalog": catalog, "catalog_error": m.CatalogError, "ring": m.Ring.Snapshot(), "system": m.systemLocked(), "free_bytes": m.diskProbe(m.dir).AvailableBytes, "version": "0.3.0"}
+	return map[string]any{"updates": m.updateStatus(), "plugins": plugins, "settings": m.state.Settings, "sources": sources, "catalog": catalog, "catalog_error": m.CatalogError, "ring": m.Ring.Snapshot(), "system": m.systemLocked(), "free_bytes": m.diskProbe(m.dir).AvailableBytes, "version": Version}
 }
 func (m *Manager) Run(ctx context.Context) {
 	m.mu.Lock()
@@ -456,6 +458,7 @@ func (m *Manager) Run(ctx context.Context) {
 		}
 	}
 	m.save()
+	m.ready = true
 	m.mu.Unlock()
 	go func() { _ = m.RefreshAll(ctx) }()
 	ticker := time.NewTicker(100 * time.Millisecond)
@@ -490,4 +493,11 @@ func (m *Manager) Run(ctx context.Context) {
 			m.Ring.Flush()
 		}
 	}
+}
+
+func (m *Manager) updateStatus() any {
+	if m.Updater == nil {
+		return nil
+	}
+	return m.Updater.Status()
 }

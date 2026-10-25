@@ -54,6 +54,7 @@ function updateSystemMetrics(){
 }
 function settingsPage(c){
  c.append(head('Настройки колонки','Память, плагины и источники.'),systemSummary());
+ managerUpdates(c);
  const heading=el('div','section-head');heading.append(el('h2','',t('Источники плагинов')),button('Добавить источник',()=>sourceDialog(),'primary'));c.append(heading);
  const sources=el('div','source-list');
  for(const source of state.sources||[]){
@@ -145,4 +146,29 @@ function detailPage(c){
  form.append(el('div','metadata',`${t('Место на диске')}: ${formatBytes(p.storage_bytes||0)} · ${t('Память WASM')}: ${formatBytes(p.wasm_memory_bytes||0)}`));
  if(p.logs?.length)form.append(el('h3','',t('Журнал')),el('pre','',p.logs.join('\n')));
  const preview=el('aside','preview-panel');preview.append(makeSpeaker(),el('h3','',t(state.ring?.hardware?'Подсветка колонки':'Предпросмотр на ПК')),el('p','',t('Цвета показывают кадр, который создал запущенный плагин.')));grid.append(form,preview);c.append(grid);updateRings();
+}
+
+function updateWords(ru,en){return lang==='ru'?ru:en}
+function managerUpdates(c){
+ if(!state.updates)return;
+ const box=el('section','settings-box spaced');box.append(el('h2','',updateWords('Обновления менеджера','Manager updates')));
+ box.append(el('p','caption',updateWords('Проверяем стабильные релизы на GitHub раз в 5 часов. Плагины и настройки сохраняются.','Stable GitHub releases are checked every 5 hours. Plugins and settings are preserved.')));
+ const status=el('p','info');status.id='manager-update-status';box.append(status);
+ const times=el('p','caption');times.id='manager-update-times';box.append(times);
+ const row=el('div','button-row'),label=el('label','permission'),enabled=el('input');enabled.type='checkbox';enabled.id='manager-update-enabled';enabled.checked=!!state.updates.enabled;
+ enabled.onchange=()=>action(async()=>{try{state.updates=await api('/api/updates/settings',{enabled:enabled.checked})}finally{updateManagerUpdates()}});
+ label.append(enabled,document.createTextNode(updateWords('Автоматически устанавливать обновления','Automatically install updates')));
+ const check=button(updateWords('Проверить сейчас','Check now'),async()=>{await api('/api/updates/check',{});toast(updateWords('Проверка обновлений запущена','Update check started'));state.updates=await api('/api/updates');updateManagerUpdates()},'secondary');check.id='manager-update-check';
+ row.append(label,check);box.append(row);
+ const repo=el('a','caption',updateWords('Релизы на GitHub ↗','GitHub releases ↗'));repo.href='https://github.com/hertebeznat-cell/alice-homebrew/releases';repo.target='_blank';repo.rel='noopener';box.append(repo);c.append(box);updateManagerUpdates();
+}
+function updateManagerUpdates(){
+ const u=state.updates,status=$('manager-update-status'),times=$('manager-update-times');if(!u||!status)return;
+ const states={idle:['Ожидает проверки','Waiting to check'],checking:['Проверяем GitHub…','Checking GitHub…'],downloading:['Скачиваем обновление…','Downloading update…'],restarting:['Обновляем и перезапускаем менеджер…','Installing and restarting…'],'up-to-date':['Установлена актуальная версия','You are up to date'],updated:['Менеджер обновлён','Manager updated'],available:['Доступна новая версия','An update is available'],error:['Не удалось обновить','Update failed'],'rolled-back':['Восстановлена предыдущая версия','Previous version restored']};
+ const words=states[u.state]||states.idle;status.textContent=updateWords(words[0],words[1])+' · '+u.current_version+(u.latest_version&&u.latest_version!==u.current_version?' → '+u.latest_version:'')+(u.error?' · '+u.error:'');
+ if(!u.supported)status.textContent+=' · '+updateWords('Автоустановка работает в службе Linux на колонке.','Automatic installation is available in the managed Linux speaker service.');
+ status.className='info'+(['error','rolled-back'].includes(u.state)?' warn':'');
+ const date=value=>value&&!value.startsWith('0001-')?new Date(value).toLocaleString(lang==='ru'?'ru-RU':'en-US'):'—';
+ times.textContent=updateWords('Последняя проверка: ','Last check: ')+date(u.last_check)+' · '+updateWords('Следующая: ','Next: ')+date(u.next_check);
+ const busy=['checking','downloading','restarting'].includes(u.state),enabled=$('manager-update-enabled'),check=$('manager-update-check');if(enabled){enabled.checked=!!u.enabled;enabled.disabled=busy||!u.supported}if(check)check.disabled=busy;
 }

@@ -28,3 +28,8 @@ The separate moderator service on the maintainer PC retains its own access code.
   uninstalled on the speaker for its owner's manual test.
 - Complete dependency archives and receiver relinking materials accompany
   the native package in the separate source release asset.
+
+
+## 0.4.0 manager updates
+
+Tests cover persisted five-hour scheduling, disabled updates, version ordering/no downgrade, draft/prerelease rejection, pinned release repository and architecture, SHA-256 mismatch, staging cleanup and interrupted update recovery. A separate Linux real-process fixture upgrades 0.4.0 to a test-only 0.4.1 and exercises failed-start rollback while preserving an enabled plugin/config. The fixture is not a public 0.4.1 release.

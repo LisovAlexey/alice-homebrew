@@ -25,6 +25,19 @@ func run() error {
 		return fmt.Errorf("usage: alice-homebrew station|store|pack|check|export")
 	}
 	role := os.Args[1]
+	if role == "version" {
+		fmt.Println(homebrew.Version)
+		return nil
+	}
+	if role == "update-helper" || role == "recover-update" {
+		if len(os.Args) != 3 {
+			return fmt.Errorf("%s PLAN.json", role)
+		}
+		if role == "update-helper" {
+			return homebrew.RunUpdateHelper(os.Args[2])
+		}
+		return homebrew.RecoverManagerUpdate(os.Args[2])
+	}
 	if role == "pack" {
 		if len(os.Args) != 4 {
 			return fmt.Errorf("pack DIRECTORY OUTPUT.aliceplugin")
@@ -93,6 +106,7 @@ func run() error {
 	hardware := flags.Bool("hardware-led", false, "enable fixed Mini 1 I2C LED backend")
 	local := flags.Bool("allow-local-store", false, "allow HTTP catalogs for local testing")
 	scanner := flags.String("scanner", "", "path to clamscan (moderator only)")
+	managed := flags.Bool("managed", false, "managed Linux service: automatic manager updates and restart")
 	if e := flags.Parse(os.Args[2:]); e != nil {
 		return e
 	}
@@ -113,12 +127,18 @@ func run() error {
 	var store *homebrew.Store
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
+	managerDone := make(chan struct{})
 	if role == "station" {
 		manager, e = homebrew.NewManager(*data, *hardware, *local)
 		if e != nil {
 			return e
 		}
-		go manager.Run(ctx)
+		manager.Updater, e = homebrew.NewUpdater(*data, *listen, *managed)
+		if e != nil {
+			return e
+		}
+		go func() { defer close(managerDone); manager.Run(ctx) }()
+		go manager.Updater.Run(ctx)
 	} else {
 		store, e = homebrew.NewStore(*data, *scanner)
 		if e != nil {
@@ -138,6 +158,9 @@ func run() error {
 	}
 	e = server.ListenAndServe()
 	if e == http.ErrServerClosed {
+		if role == "station" {
+			<-managerDone
+		}
 		return nil
 	}
 	return e

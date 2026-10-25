@@ -1,6 +1,7 @@
 """Build only Homebrew. No rooting tools, firmware or private data are packaged."""
 from pathlib import Path
 import hashlib
+import re
 import json
 import os
 import subprocess
@@ -12,7 +13,8 @@ build=root/'bin';build.mkdir(exist_ok=True)
 for system,arch,extension in [('windows','amd64','.exe'),('linux','amd64',''),('linux','arm64','')]:
     env=os.environ.copy();env.update(CGO_ENABLED='0',GOOS=system,GOARCH=arch)
     subprocess.run(['go','build','-trimpath','-ldflags=-s -w','-o',str(build/f'alice-homebrew-{system}-{arch}{extension}'),'./cmd/alice-homebrew'],cwd=root,env=env,check=True)
-package=out/'AliceHomebrew-0.3.0.zip'
+version=re.search(r'var Version = "([^"]+)"',(root/'internal/homebrew/version.go').read_text()).group(1)
+package=out/f'AliceHomebrew-{version}.zip' 
 with zipfile.ZipFile(package,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for path in sorted(build.iterdir()):z.write(path,'bin/'+path.name)
     for name in ['README.md','LICENSE','THIRD_PARTY.md','VALIDATION.md','RELEASE_NOTES.md']:
@@ -23,7 +25,9 @@ with zipfile.ZipFile(package,'w',zipfile.ZIP_DEFLATED,compresslevel=9) as z:
     for path in (root/'docs/packages').glob('*.aliceplugin'):
         with zipfile.ZipFile(path) as plugin:manifest=json.loads(plugin.read('manifest.json'))
         z.write(path,f"plugins/{manifest['id']}-{manifest['version']}.aliceplugin")
-files=[package]
+for binary in build.iterdir():(out/binary.name).write_bytes(binary.read_bytes())
+files=[package]+[out/binary.name for binary in build.iterdir()]
+(out/'version.txt').write_text(version+'\n',encoding='ascii')
 for path in (root/'docs/packages').glob('*.aliceplugin'):
     with zipfile.ZipFile(path) as plugin:manifest=json.loads(plugin.read('manifest.json'))
     target=out/f"{manifest['id']}-{manifest['version']}.aliceplugin";target.write_bytes(path.read_bytes());files.append(target)
