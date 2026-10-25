@@ -61,7 +61,20 @@ func (m *Manager) pluginBytesLocked(p *Installed) (uint64, uint64) {
 	if p.Previous != nil && p.Previous.SHA256 != p.SHA256 {
 		previous = fileBytes(filepath.Join(m.dir, "packages", p.Previous.SHA256+".aliceplugin"))
 	}
+	current += directoryBytes(filepath.Join(m.dir, "plugin-data", p.Manifest.ID))
 	return current + previous, previous
+}
+func directoryBytes(root string) uint64 {
+	var total uint64
+	filepath.WalkDir(root, func(path string, d os.DirEntry, e error) error {
+		if e == nil && d.Type().IsRegular() {
+			if s, e := d.Info(); e == nil {
+				total += uint64(s.Size())
+			}
+		}
+		return nil
+	})
+	return total
 }
 func (m *Manager) storagePlanLocked(packageBytes uint64) StoragePlan {
 	d := m.diskProbe(m.dir)
@@ -90,7 +103,7 @@ func (m *Manager) TicketStorage(id string) (StoragePlan, error) {
 	if !ok || time.Now().After(t.Expires) {
 		return StoragePlan{}, errors.New("package confirmation expired")
 	}
-	return m.storagePlanLocked(uint64(len(t.Package.Raw))), nil
+	return m.storagePlanLocked(t.Package.RequiredStorage()), nil
 }
 func (m *Manager) systemLocked() map[string]any {
 	d := m.diskProbe(m.dir)
@@ -102,7 +115,7 @@ func (m *Manager) systemLocked() map[string]any {
 	var heap runtime.MemStats
 	runtime.ReadMemStats(&heap)
 	memory.GoHeapBytes = heap.HeapAlloc
-	return map[string]any{"disk": d, "memory": memory, "version": "0.2.0", "os": runtime.GOOS, "architecture": runtime.GOARCH, "cpu_count": runtime.NumCPU(), "plugin_count": len(m.state.Plugins), "running_count": len(m.running), "max_plugins": 8, "max_running": 4, "hardware_led": m.Ring.Snapshot()["hardware"]}
+	return map[string]any{"disk": d, "memory": memory, "version": "0.3.0", "os": runtime.GOOS, "architecture": runtime.GOARCH, "cpu_count": runtime.NumCPU(), "plugin_count": len(m.state.Plugins), "running_count": len(m.running), "max_plugins": 8, "max_running": 4, "hardware_led": m.Ring.Snapshot()["hardware"]}
 }
 func (m *Manager) System() map[string]any { m.mu.Lock(); defer m.mu.Unlock(); return m.systemLocked() }
 func (m *Manager) Status() map[string]any {
@@ -111,8 +124,8 @@ func (m *Manager) Status() map[string]any {
 	plugins := []map[string]any{}
 	for id, p := range m.state.Plugins {
 		var memory uint32
-		if r := m.running[id]; r != nil && r.module.Memory() != nil {
-			memory = r.module.Memory().Size()
+		if r := m.running[id]; r != nil {
+			memory = r.MemoryBytes()
 		}
 		plugins = append(plugins, map[string]any{"id": id, "enabled": p.Enabled, "last_error": p.LastError, "wasm_memory_bytes": memory})
 	}

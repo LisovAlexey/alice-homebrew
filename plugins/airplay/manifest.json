@@ -1,0 +1,98 @@
+{
+  "format": 1,
+  "id": "airplay",
+  "version": "1.0.0-beta.1",
+  "api": 2,
+  "engine": "native",
+  "title": {
+    "ru": "AirPlay",
+    "en": "AirPlay"
+  },
+  "description": {
+    "ru": "Приём звука с iPhone, iPad и Mac по AirPlay в локальной сети. Первая тестовая версия для Мини 1. Без трансляции экрана.",
+    "en": "Receive audio from iPhone, iPad and Mac over AirPlay on your LAN. First test release for Mini 1. No screen mirroring."
+  },
+  "author": "Alice Homebrew",
+  "permissions": [
+    "system.full-access",
+    "log.write"
+  ],
+  "capabilities": [
+    "audio.playback",
+    "network.listen",
+    "network.multicast"
+  ],
+  "config": [
+    {
+      "key": "name",
+      "label": {
+        "ru": "Имя в AirPlay",
+        "en": "AirPlay name"
+      },
+      "type": "text",
+      "default": "Alice Mini",
+      "max_length": 32
+    },
+    {
+      "key": "password",
+      "label": {
+        "ru": "Пароль подключения (пусто — без пароля)",
+        "en": "Connection password (empty to disable)"
+      },
+      "type": "text",
+      "default": "",
+      "max_length": 64
+    },
+    {
+      "key": "device",
+      "label": {
+        "ru": "Выход звука",
+        "en": "Audio output"
+      },
+      "type": "select",
+      "default": "plughw:0,0",
+      "options": [
+        {
+          "value": "plughw:0,0",
+          "label": {
+            "ru": "TDM-B · PCM 0",
+            "en": "TDM-B · PCM 0"
+          }
+        },
+        {
+          "value": "plughw:0,1",
+          "label": {
+            "ru": "TDM-C · PCM 1",
+            "en": "TDM-C · PCM 1"
+          }
+        }
+      ]
+    },
+    {
+      "key": "max-volume",
+      "label": {
+        "ru": "Максимальная громкость, дБ",
+        "en": "Maximum volume, dB"
+      },
+      "type": "range",
+      "default": -10,
+      "min": -60,
+      "max": 0,
+      "step": 1
+    },
+    {
+      "key": "port",
+      "label": {
+        "ru": "Порт AirPlay",
+        "en": "AirPlay port"
+      },
+      "type": "range",
+      "default": 7000,
+      "min": 1024,
+      "max": 65535,
+      "step": 1
+    }
+  ],
+  "module_sha256": "8599bc0f2e3e3531ee6e919b082c35864c1c1255fd0c88974b8e5af8c5eacb66",
+  "runtime_storage_bytes": 6244696
+}

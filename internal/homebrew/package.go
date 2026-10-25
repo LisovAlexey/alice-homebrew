@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"debug/elf"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -15,9 +16,11 @@ import (
 	"strings"
 )
 
-const MaxPackage = 4 << 20
+const MaxPackage = 16 << 20
+const MaxWASMPackage = 4 << 20
 const MaxModule = 2 << 20
-const APIVersion = 1
+const MaxNativeModule = 24 << 20
+const APIVersion = 2
 
 var idRE = regexp.MustCompile(`^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$`)
 var versionRE = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$`)
@@ -43,16 +46,19 @@ type Field struct {
 	MaxLength int      `json:"max_length,omitempty"`
 }
 type Manifest struct {
-	Format       int      `json:"format"`
-	ID           string   `json:"id"`
-	Version      string   `json:"version"`
-	Title        Text     `json:"title"`
-	Description  Text     `json:"description"`
-	Author       string   `json:"author"`
-	API          int      `json:"api"`
-	Permissions  []string `json:"permissions"`
-	Config       []Field  `json:"config"`
-	ModuleSHA256 string   `json:"module_sha256"`
+	Format         int      `json:"format"`
+	ID             string   `json:"id"`
+	Version        string   `json:"version"`
+	Title          Text     `json:"title"`
+	Description    Text     `json:"description"`
+	Author         string   `json:"author"`
+	API            int      `json:"api"`
+	Engine         string   `json:"engine,omitempty"`
+	Capabilities   []string `json:"capabilities,omitempty"`
+	RuntimeStorage uint64   `json:"runtime_storage_bytes,omitempty"`
+	Permissions    []string `json:"permissions"`
+	Config         []Field  `json:"config"`
+	ModuleSHA256   string   `json:"module_sha256"`
 }
 type Package struct {
 	Manifest Manifest
@@ -75,8 +81,25 @@ func decode(data []byte, dst any) error {
 	return nil
 }
 func ValidateManifest(m Manifest) error {
-	if m.Format != 1 || m.API != APIVersion || len(m.ID) > 64 || len(m.ID) < 3 || !idRE.MatchString(m.ID) || !versionRE.MatchString(m.Version) {
+	if m.Format != 1 || (m.API != 1 && m.API != 2) || len(m.ID) > 64 || len(m.ID) < 3 || !idRE.MatchString(m.ID) || !versionRE.MatchString(m.Version) {
 		return errors.New("unsupported manifest format, ID, version or API")
+	}
+	if (m.Engine != "" && m.Engine != "native") || (m.Engine == "native") != (m.API == 2) {
+		return errors.New("native plugins require API 2; WASM plugins use API 1")
+	}
+	if m.RuntimeStorage > 64<<20 || (m.Engine != "native" && m.RuntimeStorage != 0) {
+		return errors.New("invalid native runtime storage allowance")
+	}
+	if len(m.Capabilities) > 32 {
+		return errors.New("too many capabilities")
+	}
+	for _, c := range m.Capabilities {
+		if !idRE.MatchString(c) || len(c) > 64 {
+			return errors.New("invalid capability")
+		}
+	}
+	if m.Engine != "native" && len(m.Capabilities) > 0 {
+		return errors.New("capabilities require native engine")
 	}
 	if m.Title.RU == "" && m.Title.EN == "" {
 		return errors.New("plugin title is missing")
@@ -86,10 +109,13 @@ func ValidateManifest(m Manifest) error {
 	}
 	seen := map[string]bool{}
 	for _, p := range m.Permissions {
-		if seen[p] || (p != "led.ring" && p != "log.write") {
+		if seen[p] || (p != "led.ring" && p != "log.write" && !(m.Engine == "native" && p == "system.full-access")) {
 			return fmt.Errorf("unsupported or duplicate permission: %s", p)
 		}
 		seen[p] = true
+	}
+	if m.Engine == "native" && !seen["system.full-access"] {
+		return errors.New("native plugins must declare system.full-access")
 	}
 	if len(m.Config) > 32 {
 		return errors.New("too many configuration fields")
@@ -186,7 +212,7 @@ func Config(m Manifest, supplied map[string]any) (map[string]any, error) {
 }
 func Parse(raw []byte) (*Package, error) {
 	if len(raw) > MaxPackage {
-		return nil, errors.New("package exceeds 4 MiB")
+		return nil, errors.New("package exceeds 16 MiB")
 	}
 	z, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
 	if err != nil {
@@ -195,7 +221,7 @@ func Parse(raw []byte) (*Package, error) {
 	files := map[string][]byte{}
 	var total uint64
 	for _, f := range z.File {
-		if f.Name != "manifest.json" && f.Name != "plugin.wasm" && f.Name != "README.md" && f.Name != "LICENSE" {
+		if f.Name != "manifest.json" && f.Name != "plugin.wasm" && f.Name != "plugin.elf" && f.Name != "README.md" && f.Name != "LICENSE" {
 			return nil, fmt.Errorf("unexpected archive path: %s", f.Name)
 		}
 		if f.Mode()&os.ModeSymlink != 0 || f.FileInfo().IsDir() {
@@ -205,19 +231,23 @@ func Parse(raw []byte) (*Package, error) {
 			return nil, errors.New("duplicate archive entry")
 		}
 		total += f.UncompressedSize64
-		if total > MaxPackage || f.UncompressedSize64 > MaxModule {
+		limit := uint64(MaxModule)
+		if f.Name == "plugin.elf" {
+			limit = MaxNativeModule
+		}
+		if total > MaxNativeModule+MaxModule || f.UncompressedSize64 > limit {
 			return nil, errors.New("expanded package is too large")
 		}
 		r, e := f.Open()
 		if e != nil {
 			return nil, e
 		}
-		b, e := io.ReadAll(io.LimitReader(r, MaxModule+1))
+		b, e := io.ReadAll(io.LimitReader(r, int64(limit)+1))
 		r.Close()
 		if e != nil {
 			return nil, e
 		}
-		if len(b) > MaxModule {
+		if uint64(len(b)) > limit {
 			return nil, errors.New("archive entry is too large")
 		}
 		files[f.Name] = b
@@ -228,6 +258,22 @@ func Parse(raw []byte) (*Package, error) {
 	}
 	if err = ValidateManifest(m); err != nil {
 		return nil, err
+	}
+	if m.Engine == "native" {
+		if _, ok := files["plugin.wasm"]; ok {
+			return nil, errors.New("native archive contains WASM")
+		}
+		module := files["plugin.elf"]
+		if err = validateELF(module); err != nil {
+			return nil, err
+		}
+		if m.ModuleSHA256 != Digest(module) {
+			return nil, errors.New("module checksum mismatch")
+		}
+		return &Package{m, module, raw, Digest(raw)}, nil
+	}
+	if _, ok := files["plugin.elf"]; ok || len(raw) > MaxWASMPackage || total > MaxWASMPackage {
+		return nil, errors.New("WASM package exceeds limits or contains native code")
 	}
 	wasm := files["plugin.wasm"]
 	if len(wasm) < 8 || !bytes.Equal(wasm[:8], []byte{0, 97, 115, 109, 1, 0, 0, 0}) {
@@ -247,7 +293,11 @@ func Pack(dir string) ([]byte, error) {
 	if err = decode(raw, &m); err != nil {
 		return nil, err
 	}
-	wasm, err := os.ReadFile(dir + "/plugin.wasm")
+	moduleName := "plugin.wasm"
+	if m.Engine == "native" {
+		moduleName = "plugin.elf"
+	}
+	wasm, err := os.ReadFile(dir + "/" + moduleName)
 	if err != nil {
 		return nil, err
 	}
@@ -258,11 +308,11 @@ func Pack(dir string) ([]byte, error) {
 	}
 	var b bytes.Buffer
 	z := zip.NewWriter(&b)
-	for _, name := range []string{"manifest.json", "plugin.wasm", "README.md", "LICENSE"} {
+	for _, name := range []string{"manifest.json", moduleName, "README.md", "LICENSE"} {
 		var data []byte
 		if name == "manifest.json" {
 			data = raw
-		} else if name == "plugin.wasm" {
+		} else if name == moduleName {
 			data = wasm
 		} else {
 			data, err = os.ReadFile(dir + "/" + name)
@@ -288,6 +338,44 @@ func Pack(dir string) ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
+}
+
+func validateELF(module []byte) error {
+	f, e := elf.NewFile(bytes.NewReader(module))
+	if e != nil {
+		return fmt.Errorf("native ELF: %w", e)
+	}
+	defer f.Close()
+	if f.Class != elf.ELFCLASS64 || f.Data != elf.ELFDATA2LSB || f.Machine != elf.EM_AARCH64 || (f.Type != elf.ET_EXEC && f.Type != elf.ET_DYN) {
+		return errors.New("native plugin must be Linux ARM64 ELF")
+	}
+	for _, p := range f.Progs {
+		if p.Type == elf.PT_INTERP {
+			return errors.New("native plugin must be static (no external ELF interpreter)")
+		}
+	}
+	entryMapped := false
+	for _, p := range f.Progs {
+		if p.Type == elf.PT_LOAD && p.Flags&elf.PF_X != 0 && f.Entry >= p.Vaddr && f.Entry-p.Vaddr < p.Filesz && p.Off <= uint64(len(module)) && p.Filesz <= uint64(len(module))-p.Off {
+			entryMapped = true
+		}
+	}
+	if !entryMapped {
+		return errors.New("native entry point is not in an executable load segment")
+	}
+	libs, e := f.ImportedLibraries()
+	if e != nil || len(libs) != 0 {
+		return errors.New("native plugin has external shared-library dependencies")
+	}
+	return nil
+}
+
+func (p *Package) RequiredStorage() uint64 {
+	n := uint64(len(p.Raw))
+	if p.Manifest.Engine == "native" {
+		n += uint64(len(p.Module)) + p.Manifest.RuntimeStorage
+	}
+	return n
 }
 func Has(m Manifest, permission string) bool {
 	for _, p := range m.Permissions {

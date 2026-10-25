@@ -8,8 +8,3 @@ catalog-signing.key
 state.json
 store.json
 *.log
-
-/bin/
-/release/
-*.pyc
-__pycache__/

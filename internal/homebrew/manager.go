@@ -19,6 +19,7 @@ type Saved struct {
 	SourceID       string         `json:"source_id,omitempty"`
 	SourceName     string         `json:"source_name,omitempty"`
 	SourceOfficial bool           `json:"source_official,omitempty"`
+	NativeConsent  bool           `json:"native_consent,omitempty"`
 }
 type Installed struct {
 	Saved
@@ -51,7 +52,7 @@ type Manager struct {
 	mu              sync.Mutex
 	dir             string
 	state           State
-	running         map[string]*Runner
+	running         map[string]PluginRunner
 	tickets         map[string]ticket
 	Ring            *Ring
 	catalog         *Catalog
@@ -69,7 +70,7 @@ func NewManager(dir string, hardware, allowLocal bool) (*Manager, error) {
 	if e != nil {
 		return nil, e
 	}
-	m := &Manager{dir: dir, Ring: ring, running: map[string]*Runner{}, tickets: map[string]ticket{}, AllowLocalStore: allowLocal, catalogs: map[string]*Catalog{}, diskProbe: diskUsage}
+	m := &Manager{dir: dir, Ring: ring, running: map[string]PluginRunner{}, tickets: map[string]ticket{}, AllowLocalStore: allowLocal, catalogs: map[string]*Catalog{}, diskProbe: diskUsage}
 	m.state.Plugins = map[string]*Installed{}
 	b, e := os.ReadFile(filepath.Join(dir, "state.json"))
 	if e == nil {
@@ -135,7 +136,7 @@ func (m *Manager) Stage(raw []byte, reviewed bool) (map[string]any, error) {
 	}
 	id := randomID()
 	m.tickets[id] = ticket{Package: p, Reviewed: reviewed, Expires: time.Now().Add(10 * time.Minute)}
-	return map[string]any{"ticket": id, "manifest": p.Manifest, "sha256": p.SHA256, "bytes": len(raw), "reviewed": reviewed, "storage": m.storagePlanLocked(uint64(len(raw)))}, nil
+	return map[string]any{"ticket": id, "manifest": p.Manifest, "sha256": p.SHA256, "bytes": len(raw), "reviewed": reviewed, "storage": m.storagePlanLocked(p.RequiredStorage())}, nil
 }
 func (m *Manager) Install(id string, permissions []string, acknowledgeLocal bool) error {
 	m.mu.Lock()
@@ -179,7 +180,7 @@ func (m *Manager) Install(id string, permissions []string, acknowledgeLocal bool
 	if old != nil && old.SHA256 == p.SHA256 {
 		return errors.New("this version is already installed")
 	}
-	if plan := m.storagePlanLocked(uint64(len(p.Raw))); !plan.Fits {
+	if plan := m.storagePlanLocked(p.RequiredStorage()); !plan.Fits {
 		return &StorageError{Plan: plan}
 	}
 	supplied := map[string]any{}
@@ -198,6 +199,7 @@ func (m *Manager) Install(id string, permissions []string, acknowledgeLocal bool
 		return e
 	}
 	current := &Installed{Saved: Saved{Manifest: p.Manifest, SHA256: p.SHA256, Config: config, Reviewed: t.Reviewed, SourceID: t.SourceID}}
+	current.NativeConsent = p.Manifest.Engine == "native" && Has(p.Manifest, "system.full-access") && accepted(p.Manifest, permissions)
 	if source := m.sourceLocked(t.SourceID); source != nil {
 		current.SourceName = source.Name
 		current.SourceOfficial = source.Official
@@ -225,6 +227,9 @@ func (m *Manager) start(id string) error {
 	if p == nil {
 		return errors.New("plugin not installed")
 	}
+	if p.Manifest.Engine == "native" && !p.NativeConsent {
+		return errors.New("native full-access consent is required")
+	}
 	if m.savedRevoked(p.Saved) {
 		return errors.New("version revoked by the moderator")
 	}
@@ -235,8 +240,8 @@ func (m *Manager) start(id string) error {
 		return errors.New("maximum 4 active plugins")
 	}
 	if Has(p.Manifest, "led.ring") {
-		for other, r := range m.running {
-			if other != id && Has(r.manifest, "led.ring") {
+		for other := range m.running {
+			if other != id && Has(m.state.Plugins[other].Manifest, "led.ring") {
 				return errors.New("another plugin already controls the LED ring")
 			}
 		}
@@ -249,7 +254,12 @@ func (m *Manager) start(id string) error {
 	if e != nil {
 		return e
 	}
-	r, e := NewRunner(pkg, config)
+	var r PluginRunner
+	if pkg.Manifest.Engine == "native" {
+		r, e = NewNativeRunner(pkg, config, m.dir)
+	} else {
+		r, e = NewRunner(pkg, config)
+	}
 	if e != nil {
 		return e
 	}
@@ -259,7 +269,7 @@ func (m *Manager) start(id string) error {
 }
 func (m *Manager) stop(id string) {
 	if r, ok := m.running[id]; ok {
-		if Has(r.manifest, "led.ring") {
+		if p := m.state.Plugins[id]; p != nil && Has(p.Manifest, "led.ring") {
 			m.Ring.Publish(make([]byte, 36))
 		}
 		r.Close()
@@ -267,6 +277,9 @@ func (m *Manager) stop(id string) {
 	}
 }
 func (m *Manager) Enable(id string, enable bool) error {
+	return m.EnableWithConsent(id, enable, false)
+}
+func (m *Manager) EnableWithConsent(id string, enable, acknowledgeNative bool) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	p := m.state.Plugins[id]
@@ -274,6 +287,9 @@ func (m *Manager) Enable(id string, enable bool) error {
 		return errors.New("plugin not installed")
 	}
 	if enable {
+		if p.Manifest.Engine == "native" && !acknowledgeNative {
+			return errors.New("confirm native full-root access before enabling")
+		}
 		if e := m.start(id); e != nil {
 			return e
 		}
@@ -308,6 +324,14 @@ func (m *Manager) SetConfig(id string, values map[string]any) error {
 	if e = m.save(); e != nil {
 		p.Config = old
 	}
+	if e == nil && p.Enabled && p.Manifest.Engine == "native" {
+		m.stop(id)
+		if e = m.start(id); e != nil {
+			p.Enabled = false
+			p.LastError = e.Error()
+			m.save()
+		}
+	}
 	return e
 }
 func (m *Manager) Remove(id string) error {
@@ -324,6 +348,18 @@ func (m *Manager) Remove(id string) error {
 	}
 	m.stop(id)
 	m.gc()
+	dataRoot, e := filepath.Abs(filepath.Join(m.dir, "plugin-data"))
+	if e != nil {
+		return e
+	}
+	target := filepath.Join(dataRoot, id)
+	relative, e := filepath.Rel(dataRoot, target)
+	if e != nil || relative != id || !idRE.MatchString(id) {
+		return errors.New("invalid plugin data path")
+	}
+	if e = os.RemoveAll(target); e != nil {
+		return fmt.Errorf("plugin removed, but data cleanup failed: %w", e)
+	}
 	return nil
 }
 func (m *Manager) Rollback(id string, permissions []string) error {
@@ -391,10 +427,8 @@ func (m *Manager) Snapshot() map[string]any {
 		copy := clone(p)
 		copy.StorageBytes, copy.PreviousBytes = m.pluginBytesLocked(p)
 		if r := m.running[p.Manifest.ID]; r != nil {
-			copy.Logs = append([]string{}, r.Logs...)
-			if r.module.Memory() != nil {
-				copy.WASMMemoryBytes = r.module.Memory().Size()
-			}
+			copy.Logs = r.LogLines()
+			copy.WASMMemoryBytes = r.MemoryBytes()
 		}
 		plugins = append(plugins, copy)
 	}
@@ -409,7 +443,7 @@ func (m *Manager) Snapshot() map[string]any {
 			sources = append(sources, clone(s))
 		}
 	}
-	return map[string]any{"plugins": plugins, "settings": m.state.Settings, "sources": sources, "catalog": catalog, "catalog_error": m.CatalogError, "ring": m.Ring.Snapshot(), "system": m.systemLocked(), "free_bytes": m.diskProbe(m.dir).AvailableBytes, "version": "0.2.0"}
+	return map[string]any{"plugins": plugins, "settings": m.state.Settings, "sources": sources, "catalog": catalog, "catalog_error": m.CatalogError, "ring": m.Ring.Snapshot(), "system": m.systemLocked(), "free_bytes": m.diskProbe(m.dir).AvailableBytes, "version": "0.3.0"}
 }
 func (m *Manager) Run(ctx context.Context) {
 	m.mu.Lock()

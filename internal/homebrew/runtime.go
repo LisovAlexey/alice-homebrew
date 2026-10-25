@@ -22,6 +22,20 @@ type Runner struct {
 	hostErr  error
 	Logs     []string
 }
+type PluginRunner interface {
+	Tick(map[string]any, uint32) ([]byte, error)
+	Close()
+	LogLines() []string
+	MemoryBytes() uint32
+}
+
+func (r *Runner) LogLines() []string { return append([]string{}, r.Logs...) }
+func (r *Runner) MemoryBytes() uint32 {
+	if r.module.Memory() != nil {
+		return r.module.Memory().Size()
+	}
+	return 0
+}
 
 func NewRunner(p *Package, config map[string]any) (*Runner, error) {
 	if e := wasmLimits(p.Module); e != nil {
@@ -146,6 +160,9 @@ func (r *Runner) Close() { r.rt.Close(context.Background()) }
 
 // ABI stays small: only the two documented permissions can cause effects.
 func ValidateModule(p *Package) error {
+	if p.Manifest.Engine == "native" {
+		return validateELF(p.Module)
+	}
 	c, e := Config(p.Manifest, nil)
 	if e != nil {
 		return e
@@ -161,6 +178,9 @@ func ValidateModule(p *Package) error {
 // Used by the moderator service: validate bytecode and ABI without executing
 // a guest start function or tick supplied by an anonymous author.
 func ValidateModuleFormat(p *Package) error {
+	if p.Manifest.Engine == "native" {
+		return validateELF(p.Module)
+	}
 	if e := wasmLimits(p.Module); e != nil {
 		return e
 	}

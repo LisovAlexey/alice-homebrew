@@ -44,7 +44,15 @@ func (s *Store) Export(out io.Writer, repository string) error {
 			return e
 		}
 	}
-	if e = add("docs/catalog/v1.json", raw); e != nil {
+	legacy, e := s.CatalogFor(1)
+	if e != nil {
+		return e
+	}
+	legacyRaw, _ := json.MarshalIndent(legacy, "", "  ")
+	if e = add("docs/catalog/v1.json", legacyRaw); e != nil {
+		return e
+	}
+	if e = add("docs/catalog/v2.json", raw); e != nil {
 		return e
 	}
 	if e = add("docs/public-key.txt", []byte(s.PublicKey()+"\n")); e != nil {
@@ -53,7 +61,7 @@ func (s *Store) Export(out io.Writer, repository string) error {
 	if e = add("docs/.nojekyll", nil); e != nil {
 		return e
 	}
-	site, _ := json.Marshal(map[string]string{"repository": repository, "catalog": "catalog/v1.json"})
+	site, _ := json.Marshal(map[string]string{"repository": repository, "catalog": "catalog/v2.json"})
 	if e = add("docs/site.json", site); e != nil {
 		return e
 	}

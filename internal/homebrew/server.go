@@ -127,7 +127,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			mode = "store"
 			pub = s.Store.PublicKey()
 		}
-		jsonResponse(w, map[string]any{"mode": mode, "authenticated": s.authed(r), "access_code_required": s.Token != "", "public_key": pub, "version": "0.2.0"})
+		jsonResponse(w, map[string]any{"mode": mode, "authenticated": s.authed(r), "access_code_required": s.Token != "", "public_key": pub, "version": "0.3.0"})
 		return
 	}
 	if r.URL.Path == "/api/login" && r.Method == "POST" {
@@ -135,8 +135,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if s.Store != nil {
-		if r.URL.Path == "/catalog/v1.json" && r.Method == "GET" {
-			v, e := s.Store.Catalog()
+		if (r.URL.Path == "/catalog/v1.json" || r.URL.Path == "/catalog/v2.json") && r.Method == "GET" {
+			maxAPI := 1
+			if r.URL.Path == "/catalog/v2.json" {
+				maxAPI = 2
+			}
+			v, e := s.Store.CatalogFor(maxAPI)
 			if e != nil {
 				errorResponse(w, e, 500)
 			} else {
@@ -231,6 +235,9 @@ func (s *Server) stationRequest(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("station manager unavailable")
 	}
 	switch {
+	case r.URL.Path == "/api/hardware" && r.Method == "GET":
+		jsonResponse(w, HardwareInventory())
+		return nil
 	case r.URL.Path == "/api/system" && r.Method == "GET":
 		jsonResponse(w, m.System())
 		return nil
@@ -395,12 +402,13 @@ func (s *Server) stationRequest(w http.ResponseWriter, r *http.Request) error {
 		switch action {
 		case "enable":
 			var q struct {
-				Enabled bool `json:"enabled"`
+				Enabled           bool `json:"enabled"`
+				AcknowledgeNative bool `json:"acknowledge_native"`
 			}
 			if e := requestJSON(w, r, &q); e != nil {
 				return e
 			}
-			if e := m.Enable(id, q.Enabled); e != nil {
+			if e := m.EnableWithConsent(id, q.Enabled, q.AcknowledgeNative); e != nil {
 				return e
 			}
 		case "config":

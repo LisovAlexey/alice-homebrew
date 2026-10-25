@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const OfficialCatalogURL = "https://raw.githubusercontent.com/hertebeznat-cell/alice-homebrew/main/docs/catalog/v1.json"
+const OfficialCatalogURL = "https://raw.githubusercontent.com/hertebeznat-cell/alice-homebrew/main/docs/catalog/v2.json"
 const OfficialCatalogKey = "bNgXwnJT9k5JhbY9QWfFRiTc/dgVlANhrJoTYAtNYAI="
 
 type Source struct {
@@ -31,7 +31,15 @@ type Source struct {
 }
 
 func officialSource(raw, key string) bool {
-	return key == OfficialCatalogKey && (raw == OfficialCatalogURL || raw == "https://hertebeznat-cell.github.io/alice-homebrew/catalog/v1.json")
+	return key == OfficialCatalogKey && officialURL(raw)
+}
+func officialURL(raw string) bool {
+	for _, u := range []string{OfficialCatalogURL, strings.Replace(OfficialCatalogURL, "v2.json", "v1.json", 1), "https://hertebeznat-cell.github.io/alice-homebrew/catalog/v1.json", "https://hertebeznat-cell.github.io/alice-homebrew/catalog/v2.json"} {
+		if raw == u {
+			return true
+		}
+	}
+	return false
 }
 func sourceID(raw, key string) string {
 	if officialSource(raw, key) {
@@ -51,9 +59,9 @@ func NormalizeSource(raw string) (string, error) {
 			return "", errors.New("use a GitHub repository URL or the direct catalog JSON URL")
 		}
 		u.Host = "raw.githubusercontent.com"
-		u.Path = "/" + parts[0] + "/" + strings.TrimSuffix(parts[1], ".git") + "/main/docs/catalog/v1.json"
+		u.Path = "/" + parts[0] + "/" + strings.TrimSuffix(parts[1], ".git") + "/main/docs/catalog/v2.json"
 	} else if !strings.HasSuffix(u.Path, ".json") {
-		u.Path = strings.TrimSuffix(u.Path, "/") + "/catalog/v1.json"
+		u.Path = strings.TrimSuffix(u.Path, "/") + "/catalog/v2.json"
 	}
 	return u.String(), nil
 }
@@ -99,6 +107,7 @@ func (m *Manager) initSources() error {
 		s.Official = officialSource(s.URL, s.Key)
 		if s.Official {
 			s.Name = "Alice Homebrew"
+			s.URL = OfficialCatalogURL
 		}
 	}
 	for _, p := range m.state.Plugins {
@@ -136,6 +145,13 @@ func (m *Manager) PreviewSource(ctx context.Context, raw, key, name string) (Sou
 		return Source{}, nil, e
 	}
 	data, e := m.download(ctx, normalized, origin, 2<<20)
+	if e != nil && !strings.HasSuffix(strings.TrimSpace(raw), ".json") {
+		normalized = strings.TrimSuffix(normalized, "v2.json") + "v1.json"
+		origin, e = m.storeURL(normalized)
+		if e == nil {
+			data, e = m.download(ctx, normalized, origin, 2<<20)
+		}
+	}
 	if e != nil {
 		return Source{}, nil, e
 	}
@@ -146,7 +162,7 @@ func (m *Manager) PreviewSource(ctx context.Context, raw, key, name string) (Sou
 		}
 		key = envelope.PublicKey
 	}
-	if normalized == OfficialCatalogURL || normalized == "https://hertebeznat-cell.github.io/alice-homebrew/catalog/v1.json" {
+	if officialURL(normalized) {
 		if key != OfficialCatalogKey {
 			return Source{}, nil, errors.New("official source public key does not match the built-in key")
 		}

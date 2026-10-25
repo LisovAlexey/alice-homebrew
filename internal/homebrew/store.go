@@ -201,12 +201,15 @@ func (s *Store) Queue() []*Submission {
 	return out
 }
 func (s *Store) Catalog() (Envelope, error) {
+	return s.CatalogFor(2)
+}
+func (s *Store) CatalogFor(maxAPI int) (Envelope, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	now := time.Now().UTC()
 	c := Catalog{Format: 1, Revision: s.state.Revision, Generated: now, Expires: now.Add(365 * 24 * time.Hour), Entries: []Entry{}, Revoked: []string{}}
 	for _, v := range s.state.Submissions {
-		if v.Status == "approved" {
+		if v.Status == "approved" && v.Manifest.API <= maxAPI {
 			c.Entries = append(c.Entries, Entry{Manifest: v.Manifest, SHA256: v.SHA256, Bytes: v.Bytes, Download: "../packages/" + v.SHA256 + ".aliceplugin", ReviewedAt: v.Reviewed})
 		}
 		if v.Status == "revoked" {
