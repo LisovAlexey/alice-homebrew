@@ -103,7 +103,7 @@ function storageDialog(plan,staged){
  if(!choices.length)d.append(el('div','info warn',t('Установленных плагинов нет. Освободите место на колонке вручную и повторите проверку.')));
  const selectedBytes=el('p','caption'),remove=button('Удалить выбранные и продолжить',async()=>{const selected=choices.filter(v=>v.check.checked);if(!selected.length)throw Error(t('Плагины не выбраны'));for(const item of selected)await api(`/api/plugins/${item.plugin.id}/remove`,{});await load();await retry()},'primary');
  const sync=()=>{const selected=choices.filter(v=>v.check.checked),bytes=selected.reduce((n,v)=>n+v.plugin.bytes,0);remove.disabled=!selected.length;selectedBytes.textContent=`${t('Выбрано для удаления')}: ${formatBytes(bytes)}${bytes<plan.missing_bytes?' · '+t('Места от удаления этих плагинов может не хватить.'):''}`};choices.forEach(v=>v.check.onchange=sync);sync();
- const retry=async()=>{const fresh=await api('/api/storage/plan',{ticket:staged.ticket});if(fresh.fits)showConfirmation({...staged,storage:fresh});else storageDialog(fresh,staged)};
+ const retry=async()=>{const fresh=await api('/api/storage/plan',{ticket:staged.ticket});if(fresh.fits){const next={...staged,storage:fresh};if(next.update&&next.fast_update)await finishPluginUpdate(next);else showConfirmation(next)}else storageDialog(fresh,staged)};
  d.append(selectedBytes,remove,button('Проверить место снова',retry,'secondary'),button('Отмена',()=>$('confirm').close(),'quiet'));openConfirm();
 }
 function catalogPage(c){
@@ -118,7 +118,7 @@ function catalogPage(c){
 }
 function detailPage(c){
  const p=state.plugins?.find(p=>p.manifest.id===selected);if(!p){selected='';pluginsPage(c);return}
- c.append(button('Назад к плагинам',()=>{selected='';render()},'quiet back'),head(text(p.manifest.title),`${p.manifest.author} · v${p.manifest.version}`,button(p.enabled?'Выключить':'Включить',async()=>{await togglePlugin(p)},p.enabled?'secondary':'primary')));
+ const headerActions=el('div','button-row');if(p.update)headerActions.append(pluginUpdateButton(p));headerActions.append(button(p.enabled?'Выключить':'Включить',async()=>{await togglePlugin(p)},p.enabled?'secondary':'primary'));c.append(button('Назад к плагинам',()=>{selected='';render()},'quiet back'),head(text(p.manifest.title),`${p.manifest.author} · v${p.manifest.version}`,headerActions));if(p.update)c.append(el('div','info',t('Доступна версия')+' '+p.update.manifest.version));
  if(p.last_error)c.append(el('div','info warn',p.last_error));
  const grid=el('div','detail-grid'),form=el('form','settings-box'),values={...p.config};
  form.append(el('p','caption',t('Настройки сохраняются на колонке и остаются после перезагрузки.')));

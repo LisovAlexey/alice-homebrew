@@ -1,3 +1,9 @@
+# Release 0.5.1
+
+Compiled and packaged without tests or manual speaker installation, at the owner’s request. See [VALIDATION-0.5.1.md](VALIDATION-0.5.1.md). Prior sections describe historical releases only.
+
+---
+
 # Release 0.5.0
 
 This release was compiled and packaged without running tests or manually installing it on the speaker, at the owner’s request. Music Ring and the changed AirPlay meter are experimental beta packages. See [VALIDATION-0.5.0.md](VALIDATION-0.5.0.md).
