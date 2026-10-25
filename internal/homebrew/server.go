@@ -242,6 +242,9 @@ func (s *Server) stationRequest(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("station manager unavailable")
 	}
 	switch {
+	case r.URL.Path == "/api/audio" && r.Method == "GET":
+		jsonResponse(w, m.Audio.Snapshot())
+		return nil
 	case r.URL.Path == "/api/updates" && r.Method == "GET":
 		if m.Updater == nil {
 			return errors.New("updater unavailable")

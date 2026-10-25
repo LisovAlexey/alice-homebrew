@@ -1,7 +1,7 @@
 {
   "format": 1,
   "id": "airplay",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "api": 2,
   "engine": "native",
   "title": {
@@ -20,7 +20,8 @@
   "capabilities": [
     "audio.playback",
     "network.listen",
-    "network.multicast"
+    "network.multicast",
+    "audio.analysis"
   ],
   "config": [
     {
@@ -93,6 +94,6 @@
       "step": 1
     }
   ],
-  "module_sha256": "8599bc0f2e3e3531ee6e919b082c35864c1c1255fd0c88974b8e5af8c5eacb66",
-  "runtime_storage_bytes": 6244696
+  "module_sha256": "3a8c7da3c36287c546c9f0a7df37f172663a7560745018abb17e5d93713aefaa",
+  "runtime_storage_bytes": 6244712
 }

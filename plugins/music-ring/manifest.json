@@ -1,0 +1,136 @@
+{
+  "format": 1,
+  "id": "music-ring",
+  "version": "1.0.0-beta.1",
+  "api": 2,
+  "engine": "native",
+  "title": {
+    "ru": "Музыкальное кольцо",
+    "en": "Music Ring"
+  },
+  "description": {
+    "ru": "Подсветка в такт AirPlay: 12 частот, пульс и бегущий свет. Нужны Homebrew 0.5.0 и AirPlay 1.0.0-beta.2. Микрофон не используется. Экспериментальная версия.",
+    "en": "Audio-reactive LEDs: 12 bands, pulse and comet. Requires Homebrew 0.5.0 and AirPlay 1.0.0-beta.2. No microphone. Experimental release."
+  },
+  "author": "Alice Homebrew",
+  "permissions": [
+    "system.full-access",
+    "led.ring",
+    "log.write"
+  ],
+  "capabilities": [
+    "audio.analysis",
+    "network.local",
+    "led.ring"
+  ],
+  "config": [
+    {
+      "key": "mode",
+      "label": {
+        "ru": "Режим",
+        "en": "Mode"
+      },
+      "type": "select",
+      "default": "spectrum",
+      "options": [
+        {
+          "value": "spectrum",
+          "label": {
+            "ru": "Спектр — 12 частот",
+            "en": "Spectrum — 12 bands"
+          }
+        },
+        {
+          "value": "pulse",
+          "label": {
+            "ru": "Пульс в такт громкости",
+            "en": "Volume pulse"
+          }
+        },
+        {
+          "value": "comet",
+          "label": {
+            "ru": "Бегущий свет под музыку",
+            "en": "Music comet"
+          }
+        }
+      ]
+    },
+    {
+      "key": "color",
+      "label": {
+        "ru": "Основной цвет",
+        "en": "Base color"
+      },
+      "type": "color",
+      "default": "#25b883"
+    },
+    {
+      "key": "accent",
+      "label": {
+        "ru": "Цвет пиков",
+        "en": "Peak color"
+      },
+      "type": "color",
+      "default": "#ff518a"
+    },
+    {
+      "key": "brightness",
+      "label": {
+        "ru": "Яркость, %",
+        "en": "Brightness, %"
+      },
+      "type": "range",
+      "default": 35,
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "key": "sensitivity",
+      "label": {
+        "ru": "Чувствительность",
+        "en": "Sensitivity"
+      },
+      "type": "range",
+      "default": 12,
+      "min": 1,
+      "max": 60,
+      "step": 1
+    },
+    {
+      "key": "smoothing",
+      "label": {
+        "ru": "Плавность, %",
+        "en": "Smoothing, %"
+      },
+      "type": "range",
+      "default": 55,
+      "min": 0,
+      "max": 95,
+      "step": 1
+    },
+    {
+      "key": "speed",
+      "label": {
+        "ru": "Скорость бегущего света",
+        "en": "Comet speed"
+      },
+      "type": "range",
+      "default": 35,
+      "min": 1,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "key": "idle",
+      "label": {
+        "ru": "Мягкое свечение в тишине",
+        "en": "Soft glow during silence"
+      },
+      "type": "boolean",
+      "default": false
+    }
+  ],
+  "module_sha256": "bb04cd0ea717f84365c5da87f973fa463188d447be3a866fa0f596e7c0b9edad"
+}

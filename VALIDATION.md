@@ -1,3 +1,9 @@
+# Release 0.5.0
+
+This release was compiled and packaged without running tests or manually installing it on the speaker, at the owner’s request. Music Ring and the changed AirPlay meter are experimental beta packages. See [VALIDATION-0.5.0.md](VALIDATION-0.5.0.md).
+
+---
+
 # Validation — 25 October 2026
 
 - Go unit/integration tests cover schema rejection, archive paths, unsupported permissions/imports, WASM memory boundaries, timeout termination, function-table limits, local package consent, signed catalogs and pinned keys, immutable publication, updates, config migration, rollback, revocation persistence, authentication and Origin checks.

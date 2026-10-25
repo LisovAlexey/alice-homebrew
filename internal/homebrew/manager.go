@@ -55,6 +55,7 @@ type Manager struct {
 	running         map[string]PluginRunner
 	tickets         map[string]ticket
 	Ring            *Ring
+	Audio           *AudioMeter
 	catalog         *Catalog
 	CatalogError    string
 	AllowLocalStore bool
@@ -73,6 +74,7 @@ func NewManager(dir string, hardware, allowLocal bool) (*Manager, error) {
 		return nil, e
 	}
 	m := &Manager{dir: dir, Ring: ring, running: map[string]PluginRunner{}, tickets: map[string]ticket{}, AllowLocalStore: allowLocal, catalogs: map[string]*Catalog{}, diskProbe: diskUsage}
+	m.Audio = &AudioMeter{}
 	m.state.Plugins = map[string]*Installed{}
 	b, e := os.ReadFile(filepath.Join(dir, "state.json"))
 	if e == nil {
@@ -448,6 +450,7 @@ func (m *Manager) Snapshot() map[string]any {
 	return map[string]any{"updates": m.updateStatus(), "plugins": plugins, "settings": m.state.Settings, "sources": sources, "catalog": catalog, "catalog_error": m.CatalogError, "ring": m.Ring.Snapshot(), "system": m.systemLocked(), "free_bytes": m.diskProbe(m.dir).AvailableBytes, "version": Version}
 }
 func (m *Manager) Run(ctx context.Context) {
+	go m.Audio.Serve(ctx)
 	m.mu.Lock()
 	for id, p := range m.state.Plugins {
 		if p.Enabled {
@@ -461,7 +464,7 @@ func (m *Manager) Run(ctx context.Context) {
 	m.ready = true
 	m.mu.Unlock()
 	go func() { _ = m.RefreshAll(ctx) }()
-	ticker := time.NewTicker(100 * time.Millisecond)
+	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	boot := time.Now()
 	for {

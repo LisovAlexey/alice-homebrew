@@ -55,6 +55,7 @@ if ! test -f "$PREFIX/lib/libavcodec.a"; then
  make -j4; make install
 fi
 cd "$WORK/src/shairport-sync-5.6.1"
+python3 "$BASE/plugins/airplay/patch-meter.py" "$PWD"
 cp "$BASE/plugins/airplay/mdns_external.c" mdns_external.c
 autoreconf -fi
 ./configure --host=aarch64-linux-gnu --prefix="$PREFIX" --with-alsa --with-stdout --with-dummy --with-external-mdns --with-ssl=openssl --with-ffmpeg --without-libdaemon LDFLAGS="$LDFLAGS -static" LIBS='-lpthread -lm -ldl'
