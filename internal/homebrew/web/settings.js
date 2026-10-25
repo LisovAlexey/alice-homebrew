@@ -165,10 +165,12 @@ function managerUpdates(c){
 function updateManagerUpdates(){
  const u=state.updates,status=$('manager-update-status'),times=$('manager-update-times');if(!u||!status)return;
  const states={idle:['Ожидает проверки','Waiting to check'],checking:['Проверяем GitHub…','Checking GitHub…'],downloading:['Скачиваем обновление…','Downloading update…'],restarting:['Обновляем и перезапускаем менеджер…','Installing and restarting…'],'up-to-date':['Установлена актуальная версия','You are up to date'],updated:['Менеджер обновлён','Manager updated'],available:['Доступна новая версия','An update is available'],error:['Не удалось обновить','Update failed'],'rolled-back':['Восстановлена предыдущая версия','Previous version restored']};
- const words=states[u.state]||states.idle;status.textContent=updateWords(words[0],words[1])+' · '+u.current_version+(u.latest_version&&u.latest_version!==u.current_version?' → '+u.latest_version:'')+(u.error?' · '+u.error:'');
+ const words=states[u.state]||states.idle;status.textContent=updateWords(words[0],words[1])+' · '+u.current_version+(isNewerManagerVersion(u.latest_version,u.current_version)?' → '+u.latest_version:'')+(u.error?' · '+u.error:'');
  if(!u.supported)status.textContent+=' · '+updateWords('Автоустановка работает в службе Linux на колонке.','Automatic installation is available in the managed Linux speaker service.');
  status.className='info'+(['error','rolled-back'].includes(u.state)?' warn':'');
  const date=value=>value&&!value.startsWith('0001-')?new Date(value).toLocaleString(lang==='ru'?'ru-RU':'en-US'):'—';
  times.textContent=updateWords('Последняя проверка: ','Last check: ')+date(u.last_check)+' · '+updateWords('Следующая: ','Next: ')+date(u.next_check);
  const busy=['checking','downloading','restarting'].includes(u.state),enabled=$('manager-update-enabled'),check=$('manager-update-check');if(enabled){enabled.checked=!!u.enabled;enabled.disabled=busy||!u.supported}if(check)check.disabled=busy;
 }
+
+function isNewerManagerVersion(candidate,current){if(!candidate)return false;const a=candidate.split('.').map(Number),b=current.split('.').map(Number);for(let i=0;i<3;i++){if(a[i]!==b[i])return a[i]>b[i]}return false}
