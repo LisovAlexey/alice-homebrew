@@ -1,24 +1,27 @@
-# Alice Legacy Fix — 0.1.0-beta.1
+# Alice Legacy Fix — 0.1.0-beta.2
 
 Экспериментальный плагин для Mini первого поколения YNDX-0004. Запускает согласованный комплект `maind`, библиотек, моделей и загрузчика с рабочей колонки вместо старого голосового стека. Это попытка устранить сбой голосовых ответов старого ПО, а не подтверждённое исправление `hasValue()`: оригинальный журнал падения проблемной колонки ещё не получен.
 
-[Скачать полный комплект с программами передачи для Windows и Linux](https://github.com/hertebeznat-cell/alice-homebrew/releases/tag/alice-legacy-fix-v0.1.0-beta.1). В магазине устанавливается небольшой плагин; для первого запуска нового стека дополнительно нужен ZIP-комплект из релиза.
+[Скачать плагин и исходники](https://github.com/hertebeznat-cell/alice-homebrew/releases/tag/alice-legacy-fix-v0.1.0-beta.2). После установки и выбора режима запуска колонка сама скачивает закреплённый комплект с GitHub. Компьютер и bundle-server больше не нужны.
 
 Поддерживается только конкретный старый комплект: SHA-256 `maind` начинается с `4a140ca5`, загрузчика — `43dc081a`; полные значения в `framework-manifest.json`. Изменённые и другие прошивки будут отклонены. Системные библиотеки тоже сверяются целиком. На нашей новой рабочей прошивке плагин должен отказать в активации.
 
 ## Установка на проблемной колонке
 
-1. Сохраните свой исходный бэкап root-инструмента на компьютере. Обычная Алиса должна быть настроена и включена. Для первого запуска выключите AirPlay, музыкальное кольцо и другие плагины звука/подсветки; SSH можно оставить.
-2. Распакуйте **весь** локальный ZIP-комплект в папку на компьютере. Загрузите файл `alice-legacy-fix-0.1.0-beta.1.aliceplugin` через веб-интерфейс Homebrew → установка своего плагина.
-3. Оставьте режим **«Только проверить совместимость»**, сохраните настройки и включите плагин. В журнале должны появиться подтверждение совместимого исходного комплекта и данные о свободном месте. Если есть ошибка — не обходите проверку, передайте текст разработчику.
-4. На Windows запустите `bundle-server-windows.exe`; разрешите доступ в брандмауэре для частной сети. На Linux выполните `chmod +x bundle-server-linux && ./bundle-server-linux`. Рядом должен лежать `alice-framework.tar.gz` из того же комплекта.
-5. Компьютер и колонка должны находиться в одной локальной сети. Скопируйте показанный программой URL с IP компьютера в поле **«Адрес комплекта»** плагина. Если показано несколько IP, нужен адрес домашней сети, не VPN. Не используйте `127.0.0.1`: для колонки это она сама.
-6. Выберите **«Запустить новый стек»** и сохраните. Если версия менеджера не перезапустила плагин после сохранения, выключите и включите его. Оставьте сервер открытым до сообщения о запуске `platformd` и `mediad`. Первый запуск может занять несколько минут; ранний запуск после включения питания ждёт окончания штатной загрузки.
-7. Попросите Алису назвать время, ответить на вопрос и включить музыку. Наличие процессов ещё не доказывает исправность диалога. Сообщите результат и журнал плагина, не присылая токены/ключи и файлы аккаунта.
+1. В Homebrew откройте **Настройки → Обновления менеджера → Проверить сейчас** и обновитесь до **0.5.4 или новее**. В этой версии журнал сохраняется после остановки плагина и обновляется на открытой странице. Дождитесь перезапуска менеджера и обновите страницу браузера.
+2. Откройте **Магазин → Обновить каталог**, установите или обновите «Алиса: старые прошивки (бета)» до **0.1.0-beta.2**. Сохраните исходный бэкап root-инструмента на компьютере. Обычная Алиса должна быть настроена и включена. Для первого запуска выключите плагины звука/подсветки, SSH можно оставить.
+3. В режиме **«Только проверить совместимость»** включите плагин. При совместимой прошивке журнал подтвердит исходный комплект и покажет свободное место. Этот режим не запускает новый голосовой стек; случайный ответ старой Алисы ещё не подтверждает работу исправления.
+4. Выберите **«Запустить новый стек»**, оставьте **адрес комплекта пустым** и нажмите **«Сохранить настройки»**. Если плагин выключен, нажмите **«Включить»**. Дальше колонка сама скачает около 27 МБ с официального GitHub-релиза, проверит HTTPS-сертификат и закреплённый SHA-256, сохранит локальный кэш и подготовит запуск.
+5. Оставьте колонку подключённой к интернету до сообщения о запуске `platformd` и `mediad`. Первый запуск может занять несколько минут. Компьютер/телефон не передают комплект и не должны держать открытую программу сервера. После успешной загрузки повторные включения используют проверенный кэш.
+6. Попросите Алису назвать время, ответить на вопрос и включить музыку. Наличие процессов ещё не доказывает исправность диалога. При ошибке журнал останется в панели после выключения плагина; скопируйте его текст разработчику, не присылая токены и файлы аккаунта.
 
-Архив комплекта около 27 МБ, распакованный стек около 47 МиБ. Требуется примерно 50 МиБ свободного накопителя на установку и кэш, не менее 96 МиБ доступной оперативной памяти перед переключением. Homebrew может предложить удалить крупные плагины. Плагин сам ничего не удаляет. После первой успешной загрузки сервер на компьютере больше не нужен: архив остаётся в локальном кэше колонки.
+Пакет из магазина содержит запускающий код. Большой комплект скачивается отдельно самой колонкой, потому что пакет `.aliceplugin` ограничен 16 МиБ. Комплект прошивки не изменился относительно beta.1: используется тот же закреплённый архив, опубликованный в её релизе отдельным `alice-framework.tar.gz`.
 
-Альтернатива серверу: загрузить `alice-framework.tar.gz` по SFTP в `/data/alice-homebrew/state/plugin-data/alice-legacy-fix/framework.tar.gz` (если Homebrew использует другой корень данных, смотрите его каталог `plugin-data`). URL тогда не нужен. SHA-256 проверяется в любом случае. Не распаковывайте архив вручную в `/system`.
+Нужно примерно 50 МиБ свободного накопителя на установку и кэш и минимум 96 МиБ доступной RAM перед переключением. Homebrew может предложить удалить крупные плагины; сам плагин их не удаляет. Распакованный стек около 47 МиБ работает в RAM. Если остановка связана с местом, памятью, другим аудиоплагином или сетью, точная причина будет в журнале.
+
+### Если у колонки нет выхода в интернет
+
+Дополнительный адрес в конфиге — только для локального HTTP-источника с IP компьютера. Оставляйте его пустым для обычной установки. Также можно передать тот же `alice-framework.tar.gz` по SFTP в `/data/alice-homebrew/state/plugin-data/alice-legacy-fix/framework.tar.gz` (при другом корне Homebrew используйте его `plugin-data`). SHA-256 проверяется и для локального файла. Старый bundle-server из beta.1 остаётся необязательным способом локальной передачи; для стандартной установки он не нужен. Не распаковывайте архив вручную в `/system`.
 
 ## Откат и ограничения
 
@@ -30,10 +33,10 @@
 
 ## English
 
-Experimental, reversible newer Alice userspace for one exact legacy Mini 1 firmware. Default mode only checks compatibility. Upload the `.aliceplugin` using Homebrew, run the adjacent bundle server on your computer, copy its private LAN URL into `bundle-url`, then explicitly select `Run newer framework`. Disable conflicting audio/LED plugins for the initial trial. Disable this plugin to return to stock Alice.
+Experimental, reversible newer Alice userspace for one exact legacy Mini 1 firmware. Default mode only checks compatibility. Update Homebrew to 0.5.4, install/update the plugin and select `Run newer framework`. Leave `bundle-url` empty: the speaker downloads the pinned bundle over HTTPS directly from GitHub. A computer-side bundle server is not required. Logs remain visible after failure. Disable conflicting audio/LED plugins for the initial trial. Disable this plugin to return to stock Alice.
 
-The pinned bundle is cached on flash and extracted into a separate tmpfs chroot. A RAM copy of the **recipient's** profile is used; its original files stay unchanged. Local profile changes made by the new stack do not persist. No donor account data is included. No physical system flashing or boot-hook replacement occurs. Root/hardware/network access is retained; chroot is not a security sandbox. Stock kernel namespace support is disabled. Actual voice-dialogue repair has not yet been demonstrated on the affected speaker. Donor firmware components are not covered by this project's MIT source license. Download the complete ZIP from the linked release in addition to the small store plugin.
+The pinned bundle is cached on flash and extracted into a separate tmpfs chroot. A RAM copy of the **recipient's** profile is used; its original files stay unchanged. Local profile changes made by the new stack do not persist. No donor account data is included. No physical system flashing or boot-hook replacement occurs. Root/hardware/network access is retained; chroot is not a security sandbox. Stock kernel namespace support is disabled. Actual voice-dialogue repair has not yet been demonstrated on the affected speaker. Donor firmware components are not covered by this project's MIT source license. The large firmware archive downloads automatically and is checked against a SHA-256 embedded in the plugin.
 
 ## Сборка исходников
 
-Go 1.26 или новее, без сторонних Go-модулей: `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o plugin.elf ./service`. Сервер: `go build ./bundle-server` под нужную ОС. Windows-переменные задаются через `$env:GOOS`, `$env:GOARCH`, `$env:CGO_ENABLED`. Для упаковки используйте `python build-plugin.py`. Приватный комплект прошивки не входит в исходники; его точные хеши и размеры закреплены в `service/payload.json` и `bundle-server/payload.json`.
+Go 1.26 или новее, без сторонних Go-модулей: `CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o plugin.elf ./service`. Сервер: `go build ./bundle-server` под нужную ОС. Windows-переменные задаются через `$env:GOOS`, `$env:GOARCH`, `$env:CGO_ENABLED`. Для упаковки используйте `python build-plugin.py`. Комплект прошивки не входит в исходники; его точные хеши и размеры закреплены в `service/payload.json` и `bundle-server/payload.json`.

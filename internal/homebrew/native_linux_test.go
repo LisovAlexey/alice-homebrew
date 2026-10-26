@@ -30,3 +30,21 @@ func TestNativeSupervisor(t *testing.T) {
 		t.Fatal("exited service reported healthy")
 	}
 }
+
+func TestNativeExitKeepsUnterminatedError(t *testing.T) {
+	cmd := exec.Command("/bin/sh", "-c", "printf 'last error without newline'; exit 1")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	r, e := startNativeProcess(cmd)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer r.Close()
+	select {
+	case <-r.done:
+	case <-time.After(time.Second):
+		t.Fatal("did not exit")
+	}
+	if len(r.LogLines()) != 1 || r.LogLines()[0] != "last error without newline" {
+		t.Fatal(r.LogLines())
+	}
+}

@@ -1,3 +1,11 @@
+# Validation — 0.1.0-beta.2
+
+Automatic pinned HTTPS bundle download replaces the required PC server. Homebrew0.5.4 retains the final log lines after a plugin exit and refreshes diagnostics without rerendering the configuration form. Target firmware, chroot, profile isolation, rollback and donor payload are unchanged. Real affected-device voice repair is still unconfirmed.
+
+Fifteen Linux tests passed, including an actual download of the public GitHub firmware asset using the bundled CA roots and verification of its SHA-256. Tests reject unknown TLS certificates and unsafe redirects, reject corrupt content before committing cache, reuse verified cache, and retain the earlier archive/profile/chroot/recovery checks. The built Homebrew CLI accepted the native package and module hash. No physical speaker update or new voice-stack activation was performed.
+
+--- Historical beta.1 checks ---
+
 # Validation — 0.1.0-beta.1
 
 Local beta; not installed or activated on the donor speaker. A voice fix on the affected 2022 speaker is not yet confirmed.

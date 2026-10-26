@@ -118,8 +118,8 @@ function catalogPage(c){
 }
 function detailPage(c){
  const p=state.plugins?.find(p=>p.manifest.id===selected);if(!p){selected='';pluginsPage(c);return}
- const headerActions=el('div','button-row');if(p.update)headerActions.append(pluginUpdateButton(p));headerActions.append(button(p.enabled?'Выключить':'Включить',async()=>{await togglePlugin(p)},p.enabled?'secondary':'primary'));c.append(button('Назад к плагинам',()=>{selected='';render()},'quiet back'),head(text(p.manifest.title),`${p.manifest.author} · v${p.manifest.version}`,headerActions));if(p.update)c.append(el('div','info',t('Доступна версия')+' '+p.update.manifest.version));
- if(p.last_error)c.append(el('div','info warn',p.last_error));
+ const headerActions=el('div','button-row');if(p.update)headerActions.append(pluginUpdateButton(p));const toggle=button(p.enabled?'Выключить':'Включить',async()=>{await togglePlugin(p)},p.enabled?'secondary':'primary');toggle.dataset.pluginToggle=p.manifest.id;headerActions.append(toggle);c.append(button('Назад к плагинам',()=>{selected='';render()},'quiet back'),head(text(p.manifest.title),`${p.manifest.author} · v${p.manifest.version}`,headerActions));if(p.update)c.append(el('div','info',t('Доступна версия')+' '+p.update.manifest.version));
+ const failure=el('div','info warn',p.last_error||'');failure.dataset.pluginError=p.manifest.id;failure.classList.toggle('hidden',!p.last_error);c.append(failure);
  const grid=el('div','detail-grid'),form=el('form','settings-box'),values={...p.config};
  form.append(el('p','caption',t('Настройки сохраняются на колонке и остаются после перезагрузки.')));
  for(const f of p.manifest.config){
@@ -144,8 +144,14 @@ function detailPage(c){
  if(p.previous)controls.append(button('Вернуть предыдущую версию',async()=>{if(confirm(t('Вернуть предыдущую версию и её настройки?'))){await api(`/api/plugins/${p.manifest.id}/rollback`,{permissions:p.previous.manifest.permissions});await load()}},'quiet'));
  controls.append(button('Удалить',async()=>{if(confirm(t('Удалить плагин и его настройки?'))){await api(`/api/plugins/${p.manifest.id}/remove`,{});selected='';await load()}},'quiet danger'));form.append(controls);
  form.append(el('div','metadata',`${t('Место на диске')}: ${formatBytes(p.storage_bytes||0)} · ${t('Память WASM')}: ${formatBytes(p.wasm_memory_bytes||0)}`));
- if(p.logs?.length)form.append(el('h3','',t('Журнал')),el('pre','',p.logs.join('\n')));
+ const journal=el('pre','',p.logs?.length?p.logs.join('\n'):updateWords('Записей пока нет. Журнал появится после запуска.','No entries yet. Logs appear after startup.'));journal.dataset.pluginLogs=p.manifest.id;form.append(el('h3','',t('Журнал')),journal);
  grid.append(form,pluginPanel(p));c.append(grid);updateRings();updatePluginPanel();
+}
+
+function updatePluginDiagnostics(){
+ for(const toggle of document.querySelectorAll('[data-plugin-toggle]')){const p=state.plugins?.find(p=>p.manifest.id===toggle.dataset.pluginToggle);if(p){toggle.textContent=t(p.enabled?'Выключить':'Включить');toggle.className=p.enabled?'secondary':'primary'}}
+ for(const journal of document.querySelectorAll('[data-plugin-logs]')){const p=state.plugins?.find(p=>p.manifest.id===journal.dataset.pluginLogs);if(p)journal.textContent=p.logs?.length?p.logs.join('\n'):updateWords('Записей пока нет. Журнал появится после запуска.','No entries yet. Logs appear after startup.')}
+ for(const failure of document.querySelectorAll('[data-plugin-error]')){const p=state.plugins?.find(p=>p.manifest.id===failure.dataset.pluginError);if(p){failure.textContent=p.last_error||'';failure.classList.toggle('hidden',!p.last_error)}}
 }
 
 function updateWords(ru,en){return lang==='ru'?ru:en}
@@ -179,6 +185,7 @@ function pluginPanel(p){
  const m=p.manifest,ring=m.permissions.includes('led.ring'),audio=m.capabilities?.includes('audio.playback'),panel=el('aside','preview-panel plugin-panel');panel.dataset.pluginPanel=m.id;
  const words=(ru,en)=>lang==='ru'?ru:en;
  if(ring){const speaker=makeSpeaker();speaker.querySelector('.ring').dataset.plugin=m.id;panel.append(speaker,el('h3','',words('Кольцо подсветки','LED ring')),el('p','caption',words('Живой кадр выбранного плагина. Выключенный плагин не показывает чужую подсветку.','Live frame for this plugin. Disabled plugins do not display another plugin’s LEDs.')))}
+ else if(m.id==='alice-legacy-fix'){panel.append(el('div','audio-glyph','↻'),el('h3','',words('Голосовая платформа Алисы','Alice voice framework')),el('p','caption',words('Оставьте адрес комплекта пустым: колонка скачает его с GitHub. Ход подготовки и ошибки — в журнале слева.','Leave the bundle URL empty to download from GitHub. Progress and errors appear in the log.')))}
  else if(audio){panel.append(el('div','audio-glyph','♫'),el('h3','',m.id==='airplay'?words('Приёмник AirPlay','AirPlay receiver'):words('Воспроизведение звука','Audio playback')),el('strong','receiver-name',String(p.config.name||text(m.title))));if(m.id==='airplay'){panel.append(el('p','caption',words('На iPhone: Пункт управления → музыка → AirPlay.','On iPhone: Control Center → music → AirPlay.')));for(const [label,value]of [[words('Выход','Output'),p.config.device],[words('Порт','Port'),p.config.port],[words('Защита','Protection'),p.config.password?words('Пароль включён','Password enabled'):words('Без пароля','No password')]]){const row=el('div','panel-value');row.append(el('span','',label),el('strong','',String(value??'—')));panel.append(row)}}}
  else{panel.append(el('div','audio-glyph',m.capabilities?.includes('audio.capture')?'◉':'⌘'),el('h3','',text(m.title)),el('p','caption',text(m.description)));for(const cap of m.capabilities||[])panel.append(el('span','badge capability',cap))}
  const status=el('div','badge panel-status');status.dataset.panelStatus=m.id;panel.append(status);

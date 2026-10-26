@@ -124,10 +124,12 @@ func (m *Manager) Status() map[string]any {
 	plugins := []map[string]any{}
 	for id, p := range m.state.Plugins {
 		var memory uint32
+		logs := p.Logs
 		if r := m.running[id]; r != nil {
 			memory = r.MemoryBytes()
+			logs = r.LogLines()
 		}
-		plugins = append(plugins, map[string]any{"id": id, "enabled": p.Enabled, "last_error": p.LastError, "wasm_memory_bytes": memory})
+		plugins = append(plugins, map[string]any{"id": id, "enabled": p.Enabled, "last_error": p.LastError, "wasm_memory_bytes": memory, "logs": boundedLogLines(logs)})
 	}
 	return map[string]any{"plugins": plugins, "system": m.systemLocked(), "updates": m.updateStatus()}
 }

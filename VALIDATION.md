@@ -1,3 +1,9 @@
+# Release 0.5.4
+
+See [VALIDATION-0.5.4.md](VALIDATION-0.5.4.md). Windows and Linux checks cover persisted plugin failure logs and final native output. No physical speaker update was performed.
+
+---
+
 # Release 0.5.3
 
 See [VALIDATION-0.5.3.md](VALIDATION-0.5.3.md) for targeted runtime cache checks. No device installation or full Homebrew suite was run. Earlier sections refer to historical releases.

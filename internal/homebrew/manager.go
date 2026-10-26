@@ -95,7 +95,7 @@ func NewManager(dir string, hardware, allowLocal bool) (*Manager, error) {
 			ring.Close()
 			return nil, errors.New("invalid installed plugin record")
 		}
-		p.Logs = nil
+		p.Logs = boundedLogLines(p.Logs)
 	}
 	if e = m.initSources(); e != nil {
 		ring.Close()
@@ -168,7 +168,9 @@ func (m *Manager) install(id string, permissions []string, acknowledgeLocal bool
 			return errors.New("a newer plugin version is required")
 		}
 		if expandedPluginAccess(old, p.Manifest) {
-			if !acknowledgeUpdate { return errors.New("confirm newly requested plugin permissions") }
+			if !acknowledgeUpdate {
+				return errors.New("confirm newly requested plugin permissions")
+			}
 		} else {
 			permissions = p.Manifest.Permissions
 		}
@@ -234,7 +236,9 @@ func (m *Manager) install(id string, permissions []string, acknowledgeLocal bool
 		prior := clone(old.Saved)
 		current.Previous = &prior
 	}
-	if updating { current.Enabled = old.Enabled }
+	if updating {
+		current.Enabled = old.Enabled
+	}
 	m.state.Plugins[p.Manifest.ID] = current
 	if e = m.save(); e != nil {
 		if old == nil {
@@ -245,7 +249,9 @@ func (m *Manager) install(id string, permissions []string, acknowledgeLocal bool
 		return e
 	}
 	m.stop(p.Manifest.ID)
-	if old != nil && Has(old.Manifest, "led.ring") { m.Ring.Publish(make([]byte, 36)) }
+	if old != nil && Has(old.Manifest, "led.ring") {
+		m.Ring.Publish(make([]byte, 36))
+	}
 	if updating && current.Enabled {
 		if startErr := m.start(p.Manifest.ID); startErr != nil {
 			m.state.Plugins[p.Manifest.ID] = old
@@ -256,7 +262,9 @@ func (m *Manager) install(id string, permissions []string, acknowledgeLocal bool
 			saveErr := m.save()
 			delete(m.tickets, id)
 			m.gc()
-			if saveErr != nil { return fmt.Errorf("plugin update failed: %v; saving rollback failed: %w", startErr, saveErr) }
+			if saveErr != nil {
+				return fmt.Errorf("plugin update failed: %v; saving rollback failed: %w", startErr, saveErr)
+			}
 			return fmt.Errorf("plugin update failed; restored previous version: %w", startErr)
 		}
 	}
@@ -307,6 +315,7 @@ func (m *Manager) start(id string) error {
 	}
 	m.running[id] = r
 	p.LastError = ""
+	p.Logs = nil
 	return nil
 }
 func (m *Manager) stop(id string) {
@@ -315,6 +324,9 @@ func (m *Manager) stop(id string) {
 			m.Ring.Publish(make([]byte, 36))
 		}
 		r.Close()
+		if p := m.state.Plugins[id]; p != nil {
+			p.Logs = boundedLogLines(r.LogLines())
+		}
 		delete(m.running, id)
 	}
 }
@@ -347,6 +359,7 @@ func (m *Manager) EnableWithConsent(id string, enable, acknowledgeNative bool) e
 	}
 	if !enable {
 		m.stop(id)
+		return m.save()
 	}
 	return nil
 }
@@ -516,6 +529,7 @@ func (m *Manager) Run(ctx context.Context) {
 			for id := range m.running {
 				m.stop(id)
 			}
+			_ = m.save()
 			m.mu.Unlock()
 			m.Ring.Flush()
 			m.Ring.Close()

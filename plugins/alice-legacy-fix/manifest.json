@@ -1,7 +1,7 @@
 {
   "format": 1,
   "id": "alice-legacy-fix",
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "api": 2,
   "engine": "native",
   "title": {
@@ -9,8 +9,8 @@
     "en": "Alice: legacy firmware (beta)"
   },
   "description": {
-    "ru": "Экспериментальный запуск нового голосового стека на поддерживаемой прошивке 2022 года. Сначала только проверка. Отключение возвращает исходную Алису; /system не прошивается.",
-    "en": "Experimental newer voice framework for one supported 2022 firmware. Inspection by default. Disable to restore stock Alice; no system flashing."
+    "ru": "Новый голосовой стек для поддерживаемой старой прошивки. Комплект автоматически скачивается с GitHub и проверяется по SHA-256. Сначала проверка совместимости; для подробного журнала нужен Homebrew 0.5.4.",
+    "en": "Newer voice framework for supported legacy firmware. Automatically downloads a SHA-256-pinned bundle from GitHub. Inspection first; Homebrew 0.5.4 retains diagnostics."
   },
   "author": "Alice Homebrew",
   "permissions": [
@@ -25,7 +25,7 @@
     "system.processes"
   ],
   "runtime_storage_bytes": 33554432,
-  "module_sha256": "cdd76e1834f3ccd261b389fe9d5bd1fd6514dc2f5e81863697a0140bc17eb119",
+  "module_sha256": "dff9d76dcc01cdafadb9ea78961288d5aaba54a99936f417aa42a6e7c6b139ca",
   "config": [
     {
       "key": "mode",
@@ -55,8 +55,8 @@
     {
       "key": "bundle-url",
       "label": {
-        "ru": "Адрес комплекта с компьютера (из окна bundle-server)",
-        "en": "Bundle URL from the computer (bundle-server window)"
+        "ru": "Адрес комплекта (пусто — автоматически с GitHub)",
+        "en": "Bundle URL (empty — automatic GitHub download)"
       },
       "type": "text",
       "default": "",

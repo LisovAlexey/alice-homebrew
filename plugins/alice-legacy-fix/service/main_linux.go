@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -206,7 +205,7 @@ func obtainPayload(ctx context.Context, data, rawURL string) error {
 	if free < spec.PayloadBytes+8*1024*1024 {
 		return fmt.Errorf("нужно ещё %.1f МиБ на диске; удалите ненужные плагины", float64(spec.PayloadBytes+8*1024*1024-free)/1048576)
 	}
-	u, e := localBundleURL(rawURL)
+	u, e := resolvePayloadURL(rawURL)
 	if e != nil {
 		return e
 	}
@@ -214,14 +213,21 @@ func obtainPayload(ctx context.Context, data, rawURL string) error {
 	if e != nil {
 		return e
 	}
-	client := http.Client{Timeout: 10 * time.Minute, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(*http.Request, []*http.Request) error { return errors.New("redirect запрещён") }}
-	r, e := client.Do(req)
+	if u.String() == officialBundleURL {
+		log.Printf("Скачивание официального комплекта с GitHub: %.1f МиБ. Компьютер и bundle-server не нужны.", float64(spec.PayloadBytes)/1048576)
+	} else {
+		log.Print("Скачивание комплекта из локального источника")
+	}
+	r, e := payloadClient().Do(req)
 	if e != nil {
-		return fmt.Errorf("локальный сервер недоступен; проверьте адрес и брандмауэр")
+		return payloadDownloadError(e)
 	}
 	defer r.Body.Close()
 	if r.StatusCode != 200 {
 		return fmt.Errorf("сервер комплекта: HTTP %d", r.StatusCode)
+	}
+	if r.ContentLength > spec.PayloadBytes {
+		return fmt.Errorf("сервер вернул слишком большой комплект")
 	}
 	temp := name + ".partial"
 	f, e := os.OpenFile(temp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
@@ -249,6 +255,7 @@ func obtainPayload(ctx context.Context, data, rawURL string) error {
 	if e = verifyPayload(temp); e != nil {
 		return e
 	}
+	log.Print("Комплект скачан. SHA-256 совпал; сохраняю локальный кэш.")
 	return os.Rename(temp, name)
 }
 func run(ctx context.Context) error {

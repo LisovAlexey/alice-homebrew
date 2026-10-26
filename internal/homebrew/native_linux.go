@@ -3,8 +3,8 @@
 package homebrew
 
 import (
-	"errors"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,15 +19,15 @@ import (
 // Native services require full-root consent at installation and again before
 // enabling. Inspection and moderation validate ELF data without executing it.
 type NativeRunner struct {
-	cmd       *exec.Cmd
-	done      chan struct{}
-	mu        sync.Mutex
-	logs      []string
-	pending   string
-	err       error
-	closeOnce sync.Once
+	cmd         *exec.Cmd
+	done        chan struct{}
+	mu          sync.Mutex
+	logs        []string
+	pending     string
+	err         error
+	closeOnce   sync.Once
 	ringAllowed bool
-	frame []byte
+	frame       []byte
 }
 
 func (r *NativeRunner) Write(b []byte) (int, error) {
@@ -51,7 +51,10 @@ func (r *NativeRunner) Write(b []byte) (int, error) {
 func (r *NativeRunner) addLine(s string) {
 	if strings.HasPrefix(s, "@alice-ring ") && r.ringAllowed {
 		frame, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(s, "@alice-ring "))
-		if err == nil && len(frame) == 36 { r.frame = frame; return }
+		if err == nil && len(frame) == 36 {
+			r.frame = frame
+			return
+		}
 	}
 	if len(s) > 2048 {
 		s = s[:2048]
@@ -106,7 +109,7 @@ func NewNativeRunner(p *Package, config map[string]any, root string) (PluginRunn
 	return r, err
 }
 func startNativeProcess(cmd *exec.Cmd, ringPermission ...bool) (*NativeRunner, error) {
-	r := &NativeRunner{cmd: cmd, done: make(chan struct{}), ringAllowed: len(ringPermission)>0 && ringPermission[0]}
+	r := &NativeRunner{cmd: cmd, done: make(chan struct{}), ringAllowed: len(ringPermission) > 0 && ringPermission[0]}
 	cmd.Stdout = r
 	cmd.Stderr = r
 	if e := cmd.Start(); e != nil {
@@ -115,6 +118,10 @@ func startNativeProcess(cmd *exec.Cmd, ringPermission ...bool) (*NativeRunner, e
 	go func() {
 		e := cmd.Wait()
 		r.mu.Lock()
+		if r.pending != "" {
+			r.addLine(r.pending)
+			r.pending = ""
+		}
 		if e == nil {
 			e = errors.New("native service exited")
 		}
