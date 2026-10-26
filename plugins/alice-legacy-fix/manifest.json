@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "id": "alice-legacy-fix",
+  "version": "0.1.0-beta.1",
+  "api": 2,
+  "engine": "native",
+  "title": {
+    "ru": "Алиса: старые прошивки (бета)",
+    "en": "Alice: legacy firmware (beta)"
+  },
+  "description": {
+    "ru": "Экспериментальный запуск нового голосового стека на поддерживаемой прошивке 2022 года. Сначала только проверка. Отключение возвращает исходную Алису; /system не прошивается.",
+    "en": "Experimental newer voice framework for one supported 2022 firmware. Inspection by default. Disable to restore stock Alice; no system flashing."
+  },
+  "author": "Alice Homebrew",
+  "permissions": [
+    "system.full-access",
+    "log.write"
+  ],
+  "capabilities": [
+    "audio.playback",
+    "audio.capture",
+    "filesystem.read",
+    "filesystem.write",
+    "system.processes"
+  ],
+  "runtime_storage_bytes": 33554432,
+  "module_sha256": "cdd76e1834f3ccd261b389fe9d5bd1fd6514dc2f5e81863697a0140bc17eb119",
+  "config": [
+    {
+      "key": "mode",
+      "label": {
+        "ru": "Режим работы",
+        "en": "Mode"
+      },
+      "type": "select",
+      "default": "inspect",
+      "options": [
+        {
+          "value": "inspect",
+          "label": {
+            "ru": "Только проверить совместимость",
+            "en": "Inspect compatibility only"
+          }
+        },
+        {
+          "value": "run-new",
+          "label": {
+            "ru": "Запустить новый стек (экспериментально)",
+            "en": "Run newer framework (experimental)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "bundle-url",
+      "label": {
+        "ru": "Адрес комплекта с компьютера (из окна bundle-server)",
+        "en": "Bundle URL from the computer (bundle-server window)"
+      },
+      "type": "text",
+      "default": "",
+      "max_length": 512
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+plugin.elf
+*.aliceplugin
+*.test
+*.tar.gz

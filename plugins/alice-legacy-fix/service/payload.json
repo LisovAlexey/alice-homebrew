@@ -1,0 +1,22 @@
+{
+  "format": 1,
+  "payload_sha256": "57e1b603d6f6832d8ddb1dde13a8982512ecab4fae86c1115d40b98eeeb0f3bd",
+  "payload_bytes": 27523810,
+  "expanded_bytes": 48687206,
+  "entries": 225,
+  "donor_maind_sha256": "e2cf7f40c7c8bdfab6b47448de55631e0f831b47124cf155ebf35e316d9c4162",
+  "donor_launcher_sha256": "bbbe877d412f3c92f4b57aa313da2e5746ab3bd7bc6e55e5c6ceb62cf9600433",
+  "target_maind_sha256": "4a140ca59787f0ca797cdbd08af9076048505932549ed743f4349f48e0743810",
+  "target_launcher_sha256": "43dc081a42778b1ca8c57668803e0bfcfc8908f4575846e4fca56371237a836f",
+  "base_files": {
+    "/lib/ld-2.23.so": "ecc6b31933a6e42fd9c5e84e2c07216b14bccf8192408d622879b4420760c77b",
+    "/lib/libc-2.23.so": "b35fe428ae343247cb4177ee2980cac194ca4ead58e8b49c5e78c2f3f9459e2f",
+    "/lib/libm-2.23.so": "18559960156936f0e6efbcc8afd673845259b16bd30a0bb1ff9dc76f126216cc",
+    "/lib/libpthread-2.23.so": "beb63dd33ede23712443df1820da69eb0ee5220694c3c83686072ee2c73d4764",
+    "/lib/libdl-2.23.so": "44adae0850e7267123669737057e5b225e8e255122c4f101fc06a9ba375772c9",
+    "/lib/librt-2.23.so": "db3ec964bd19b3c806ff7faf02bd8796615681f6d9febb53849bc99e32cff4d9",
+    "/lib/libresolv-2.23.so": "b041f64ef151580a9c4320d28b1273174de82f0cd29ff913175db25133040a3d",
+    "/lib/libstdc++.so.6.0.22": "d8c381f0289b4cde58b0e12937d475812e750ed21953d4684d811201ea3e1544",
+    "/lib/libgcc_s.so.1": "39c1b71e1880da971ee2857386b3a129648dd5cd947c7c26f283628aa9dae6d7"
+  }
+}
