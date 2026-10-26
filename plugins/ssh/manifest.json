@@ -1,0 +1,98 @@
+{
+  "format": 1,
+  "id": "ssh",
+  "version": "1.0.0-beta.1",
+  "api": 2,
+  "engine": "native",
+  "title": {
+    "ru": "SSH",
+    "en": "SSH"
+  },
+  "description": {
+    "ru": "Терминал root и передача файлов по SFTP. Вход по вашему публичному SSH-ключу, порт 2222 по умолчанию.",
+    "en": "Root SSH terminal and SFTP file transfer. Authenticate with your SSH public key; default port 2222."
+  },
+  "author": "Alice Homebrew",
+  "permissions": [
+    "system.full-access",
+    "log.write"
+  ],
+  "capabilities": [
+    "network.listen",
+    "shell.execute",
+    "filesystem.read",
+    "filesystem.write"
+  ],
+  "runtime_storage_bytes": 1048576,
+  "module_sha256": "dcdce7c43b5b19475b56b6f4a6bbdd5bd29b4b483f0e94a74ba703339316dfde",
+  "config": [
+    {
+      "key": "port",
+      "label": {
+        "ru": "Порт SSH",
+        "en": "SSH port"
+      },
+      "type": "range",
+      "default": 2222,
+      "min": 1,
+      "max": 65535,
+      "step": 1
+    },
+    {
+      "key": "public-key",
+      "label": {
+        "ru": "Ваш публичный SSH-ключ (строка из .pub)",
+        "en": "Your SSH public key (line from .pub)"
+      },
+      "type": "text",
+      "default": "",
+      "max_length": 1024
+    },
+    {
+      "key": "listen",
+      "label": {
+        "ru": "Адрес прослушивания",
+        "en": "Listen address"
+      },
+      "type": "select",
+      "default": "0.0.0.0",
+      "options": [
+        {
+          "value": "0.0.0.0",
+          "label": {
+            "ru": "Все IPv4-интерфейсы",
+            "en": "All IPv4 interfaces"
+          }
+        },
+        {
+          "value": "127.0.0.1",
+          "label": {
+            "ru": "Только сама колонка",
+            "en": "Speaker loopback only"
+          }
+        }
+      ]
+    },
+    {
+      "key": "sessions",
+      "label": {
+        "ru": "Одновременные сеансы",
+        "en": "Concurrent sessions"
+      },
+      "type": "range",
+      "default": 2,
+      "min": 1,
+      "max": 4,
+      "step": 1
+    },
+    {
+      "key": "sftp",
+      "label": {
+        "ru": "Передача файлов по SFTP",
+        "en": "SFTP file transfer"
+      },
+      "type": "boolean",
+      "default": true
+    }
+  ]
+}
