@@ -8,7 +8,7 @@ import (
 )
 
 func TestConfigAndDescriptor(t *testing.T) {
-	c := configuration{"Mini \"Room\"", "", "plughw:0,0", -10, 7000}
+	c := configuration{Name: "Mini \"Room\"", Device: "plughw:0,0", MaxVolume: -10, Port: 7000}
 	s, e := configText(c)
 	if e != nil || !strings.Contains(s, `name = "Mini \"Room\""`) {
 		t.Fatalf("%s %v", s, e)

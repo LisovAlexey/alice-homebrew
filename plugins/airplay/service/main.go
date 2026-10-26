@@ -33,6 +33,7 @@ type configuration struct {
 	Device    string  `json:"device"`
 	MaxVolume float64 `json:"max-volume"`
 	Port      int     `json:"port"`
+	AudioMode string  `json:"audio-mode"`
 }
 
 func configText(c configuration) (string, error) {
@@ -47,21 +48,28 @@ func configText(c configuration) (string, error) {
 	default:
 		return "", errors.New("choose an available Mini 1 playback PCM")
 	}
+	backend := "stdout"
+	if c.AudioMode == "direct" {
+		backend = "alsa"
+	} else if c.AudioMode != "" && c.AudioMode != "shared" {
+		return "", errors.New("choose shared or direct audio mode")
+	}
 	// JSON quoted strings are compatible with libconfig string escaping here.
 	q := func(s string) string { b, _ := json.Marshal(s); return string(b) }
 	return fmt.Sprintf(`general = {
  name = %s;
  password = %s;
  port = %d;
- output_backend = "alsa";
+ output_backend = %s;
  mdns_backend = "external-avahi";
  alac_decoder = "ffmpeg";
  volume_max_db = %.1f;
  volume_range_db = 60.0;
  ignore_volume_control = "no";
 };
-alsa = { output_device = %s; output_rate = 48000; output_format = "S32"; };
-`, q(c.Name), q(c.Password), c.Port, c.MaxVolume, q("alice_out")), nil
+alsa = { output_device = %s; output_rate = 48000; output_format = "S32"; disable_standby_mode = "never"; };
+stdout = { output_rate = 44100; output_format = "S16"; output_channels = 2; };
+`, q(c.Name), q(c.Password), c.Port, q(backend), c.MaxVolume, q("alice_out")), nil
 }
 func descriptor(b []byte) (string, string, int, []string, error) {
 	if len(b) > 16384 {
@@ -128,9 +136,19 @@ func run() error {
 	}
 	_ = os.Remove(discovery)
 	cmd := exec.Command(binary, "-c", cfg, "-v")
-	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Env = append(os.Environ(), "ALICE_MDNS_PATH="+discovery, "ALSA_CONFIG_PATH="+alsaConfig)
+	if c.AudioMode == "direct" {
+		cmd.Stdout = os.Stdout
+	} else {
+		shared, err := newSharedPlayback(root)
+		if err != nil {
+			return err
+		}
+		defer shared.Close()
+		cmd.Stdout = shared
+		log.Print("AirPlay shared audio: stock ALSA mixer; Alice services are left running")
+	}
 	if e = cmd.Start(); e != nil {
 		return e
 	}

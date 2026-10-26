@@ -1,7 +1,7 @@
 {
   "format": 1,
   "id": "airplay",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "api": 2,
   "engine": "native",
   "title": {
@@ -9,8 +9,8 @@
     "en": "AirPlay"
   },
   "description": {
-    "ru": "Приём звука с iPhone, iPad и Mac по AirPlay в локальной сети. Первая тестовая версия для Мини 1. Без трансляции экрана.",
-    "en": "Receive audio from iPhone, iPad and Mac over AirPlay on your LAN. First test release for Mini 1. No screen mirroring."
+    "ru": "AirPlay с совместным выводом через штатный микшер Алисы. Звук с iPhone, iPad и Mac в локальной сети.",
+    "en": "AirPlay through the stock Alice shared audio mixer. Audio from iPhone, iPad and Mac on your LAN."
   },
   "author": "Alice Homebrew",
   "permissions": [
@@ -45,10 +45,35 @@
       "max_length": 64
     },
     {
+      "key": "audio-mode",
+      "label": {
+        "ru": "Режим звука",
+        "en": "Audio mode"
+      },
+      "type": "select",
+      "default": "shared",
+      "options": [
+        {
+          "value": "shared",
+          "label": {
+            "ru": "Совместно с Алисой (штатный микшер)",
+            "en": "Share with Alice (stock mixer)"
+          }
+        },
+        {
+          "value": "direct",
+          "label": {
+            "ru": "Прямой выход (Алиса отключена)",
+            "en": "Direct output (Alice disabled)"
+          }
+        }
+      ]
+    },
+    {
       "key": "device",
       "label": {
-        "ru": "Выход звука",
-        "en": "Audio output"
+        "ru": "Выход для прямого режима",
+        "en": "Output for direct mode"
       },
       "type": "select",
       "default": "plughw:0,0",
@@ -94,6 +119,6 @@
       "step": 1
     }
   ],
-  "module_sha256": "3a8c7da3c36287c546c9f0a7df37f172663a7560745018abb17e5d93713aefaa",
+  "module_sha256": "eb371b0794ed6e346c7564b28c8c70eef3564248785dfa650d583b6732d8b814",
   "runtime_storage_bytes": 6244712
 }
