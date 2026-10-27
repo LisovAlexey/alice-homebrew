@@ -3,6 +3,7 @@
 package main
 
 import (
+	_ "embed"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,13 @@ import (
 	"time"
 )
 
+// Paced 32-bit writer built from ../alice-pcm.c against the firmware libasound.
+// The firmware aplay busy-polls dmix through compat ioctls and only reaches
+// about 68% of real time on Mini 1, starving Shairport.
+//
+//go:embed alice-pcm-armhf
+var pcmWriter []byte
+
 const sharedALSAConfig = `</usr/share/alsa/alsa.conf>
 defaults.pcm.rate_converter "linear"
 pcm.alice_shared {
@@ -22,16 +30,23 @@ pcm.alice_shared {
 }
 `
 
-// Use the firmware's aplay and libasound together. Its dmix shared-memory ABI
-// must match Alice's library; mixing it with the embedded modern ALSA is unsafe.
+// Use the firmware's libasound through the embedded writer. Its dmix shared-memory
+// ABI must match Alice's library; mixing it with the embedded modern ALSA is unsafe.
 func newSharedPlayback(root string) (*sharedPlayback, error) {
-	for _, path := range []string{"/system/workdir/bin/aplay", "/system/vendor/quasar/libs/libasound.so.2", "/usr/share/alsa/alsa.conf"} {
+	for _, path := range []string{"/lib/ld-linux-armhf.so.3", "/system/vendor/quasar/libs/libasound.so.2", "/usr/share/alsa/alsa.conf"} {
 		if _, err := os.Stat(path); err != nil {
 			return nil, fmt.Errorf("shared Alice audio requires firmware file %s: %w", path, err)
 		}
 	}
 	config := filepath.Join(root, "shared-alsa.conf")
 	if err := os.WriteFile(config, []byte(sharedALSAConfig), 0600); err != nil {
+		return nil, err
+	}
+	writer := filepath.Join(root, "alice-pcm")
+	if err := os.WriteFile(writer, pcmWriter, 0700); err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(writer, 0700); err != nil {
 		return nil, err
 	}
 	p := &sharedPlayback{done: make(chan struct{})}
@@ -41,7 +56,7 @@ func newSharedPlayback(root string) (*sharedPlayback, error) {
 		if _, err := os.Stat("/tmp/alsa/dmixer.conf"); err != nil {
 			return nil, errors.New("Alice shared mixer is unavailable; use direct mode only if Alice is disabled")
 		}
-		cmd := exec.Command("/system/workdir/bin/aplay", "-q", "-D", "alice_shared", "-t", "raw", "-f", "S16_LE", "-r", "44100", "-c", "2")
+		cmd := exec.Command(writer, "alice_shared", "44100", "2")
 		cmd.Env = append(os.Environ(), "LD_LIBRARY_PATH=/system/vendor/quasar/libs:/system/workdir/lib", "ALSA_CONFIG_PATH="+config)
 		cmd.Stdout, cmd.Stderr = os.Stderr, os.Stderr
 		stdin, err := cmd.StdinPipe()

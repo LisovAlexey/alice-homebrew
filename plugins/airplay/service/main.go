@@ -167,7 +167,7 @@ func run() error {
 	defer signal.Stop(signals)
 	tick := time.NewTicker(250 * time.Millisecond)
 	defer tick.Stop()
-	var server *mdns.Server
+	var server *mdnsResponder
 	var last []byte
 	defer func() {
 		if server != nil {
@@ -228,7 +228,7 @@ func run() error {
 			if server != nil {
 				server.Shutdown()
 			}
-			server, e = mdns.NewServer(&mdns.Config{Zone: zone, Iface: selectedInterface})
+			server, e = newMDNSResponder(zone, selectedInterface)
 			if e != nil {
 				return e
 			}

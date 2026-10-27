@@ -1,7 +1,7 @@
 {
   "format": 1,
   "id": "airplay",
-  "version": "1.0.0-beta.3",
+  "version": "1.0.0-beta.4",
   "api": 2,
   "engine": "native",
   "title": {
@@ -119,6 +119,6 @@
       "step": 1
     }
   ],
-  "module_sha256": "eb371b0794ed6e346c7564b28c8c70eef3564248785dfa650d583b6732d8b814",
+  "module_sha256": "c69d1602a304269372e1957f5035f11f341b1bf2204e7de0fb8edfa522f6efce",
   "runtime_storage_bytes": 6244712
 }
